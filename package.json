@@ -21,7 +21,10 @@
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.13.5",
@@ -33,9 +36,12 @@
     "@eslint/js": "^9.0.0",
     "@medusajs/test-utils": "2.13.5",
     "@types/node": "^20.17.0",
+    "@vitest/coverage-v8": "^4.1.2",
     "eslint": "^9.0.0",
     "prettier": "^3.8.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.57.2",
+    "vitest": "^4.1.2"
   }
 }

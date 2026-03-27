@@ -1,19 +1,20 @@
 import js from "@eslint/js";
+import tseslint from "typescript-eslint";
 
 export default [
   js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
-    files: ["src/**/*.ts", "src/**/*.tsx"],
-    languageOptions: {
-      ecmaVersion: 2021,
-      sourceType: "module",
-    },
+    files: ["src/**/*.ts"],
     rules: {
-      "no-unused-vars": "off",
-      "no-undef": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_" },
+      ],
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
   {
-    ignores: ["dist/", ".medusa/", "node_modules/"],
+    ignores: ["dist/", ".medusa/", "node_modules/", "coverage/"],
   },
 ];
