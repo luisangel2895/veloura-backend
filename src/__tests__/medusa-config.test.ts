@@ -16,14 +16,11 @@ describe("medusa-config logic", () => {
       const getJwtSecret = () => {
         const secret = process.env.JWT_SECRET;
         const isProduction = process.env.NODE_ENV === "production";
-        if (!secret && isProduction)
-          throw new Error("JWT_SECRET is required in production");
+        if (!secret && isProduction) throw new Error("JWT_SECRET is required in production");
         return secret || "supersecret";
       };
 
-      expect(() => getJwtSecret()).toThrowError(
-        "JWT_SECRET is required in production"
-      );
+      expect(() => getJwtSecret()).toThrowError("JWT_SECRET is required in production");
     });
 
     it("returns the secret in production when JWT_SECRET is set", () => {
@@ -33,8 +30,7 @@ describe("medusa-config logic", () => {
       const getJwtSecret = () => {
         const secret = process.env.JWT_SECRET;
         const isProduction = process.env.NODE_ENV === "production";
-        if (!secret && isProduction)
-          throw new Error("JWT_SECRET is required in production");
+        if (!secret && isProduction) throw new Error("JWT_SECRET is required in production");
         return secret || "supersecret";
       };
 
@@ -47,8 +43,7 @@ describe("medusa-config logic", () => {
       const getJwtSecret = () => {
         const secret = process.env.JWT_SECRET;
         const isProduction = process.env.NODE_ENV === "production";
-        if (!secret && isProduction)
-          throw new Error("JWT_SECRET is required in production");
+        if (!secret && isProduction) throw new Error("JWT_SECRET is required in production");
         return secret || "supersecret";
       };
 
@@ -63,14 +58,11 @@ describe("medusa-config logic", () => {
       const getCookieSecret = () => {
         const secret = process.env.COOKIE_SECRET;
         const isProduction = process.env.NODE_ENV === "production";
-        if (!secret && isProduction)
-          throw new Error("COOKIE_SECRET is required in production");
+        if (!secret && isProduction) throw new Error("COOKIE_SECRET is required in production");
         return secret || "supersecret";
       };
 
-      expect(() => getCookieSecret()).toThrowError(
-        "COOKIE_SECRET is required in production"
-      );
+      expect(() => getCookieSecret()).toThrowError("COOKIE_SECRET is required in production");
     });
 
     it("returns the secret in production when COOKIE_SECRET is set", () => {
@@ -80,8 +72,7 @@ describe("medusa-config logic", () => {
       const getCookieSecret = () => {
         const secret = process.env.COOKIE_SECRET;
         const isProduction = process.env.NODE_ENV === "production";
-        if (!secret && isProduction)
-          throw new Error("COOKIE_SECRET is required in production");
+        if (!secret && isProduction) throw new Error("COOKIE_SECRET is required in production");
         return secret || "supersecret";
       };
 
@@ -94,8 +85,7 @@ describe("medusa-config logic", () => {
       const getCookieSecret = () => {
         const secret = process.env.COOKIE_SECRET;
         const isProduction = process.env.NODE_ENV === "production";
-        if (!secret && isProduction)
-          throw new Error("COOKIE_SECRET is required in production");
+        if (!secret && isProduction) throw new Error("COOKIE_SECRET is required in production");
         return secret || "supersecret";
       };
 
@@ -123,12 +113,9 @@ describe("medusa-config logic", () => {
 
       const storeCors = process.env.STORE_CORS || "http://localhost:3000";
       const adminCors = process.env.ADMIN_CORS || "http://localhost:9000";
-      const authCors =
-        process.env.AUTH_CORS || `${storeCors},${adminCors}`;
+      const authCors = process.env.AUTH_CORS || `${storeCors},${adminCors}`;
 
-      expect(authCors).toBe(
-        "http://localhost:3000,http://localhost:9000"
-      );
+      expect(authCors).toBe("http://localhost:3000,http://localhost:9000");
     });
 
     it("respects custom CORS environment variables", () => {
@@ -163,16 +150,14 @@ describe("medusa-config logic", () => {
           {
             resolve: "@medusajs/medusa/workflow-engine-redis",
             options: { redis: { redisUrl } },
-          }
+          },
         );
       }
 
       expect(modules).toHaveLength(3);
       expect(modules[0].resolve).toBe("@medusajs/medusa/event-bus-redis");
       expect(modules[1].resolve).toBe("@medusajs/medusa/cache-redis");
-      expect(modules[2].resolve).toBe(
-        "@medusajs/medusa/workflow-engine-redis"
-      );
+      expect(modules[2].resolve).toBe("@medusajs/medusa/workflow-engine-redis");
     });
 
     it("does not load Redis modules when REDIS_URL is not set", () => {
@@ -242,15 +227,13 @@ describe("medusa-config logic", () => {
   describe("backend URL defaults", () => {
     it("defaults to localhost:9000", () => {
       delete process.env.MEDUSA_BACKEND_URL;
-      const backendUrl =
-        process.env.MEDUSA_BACKEND_URL || "http://localhost:9000";
+      const backendUrl = process.env.MEDUSA_BACKEND_URL || "http://localhost:9000";
       expect(backendUrl).toBe("http://localhost:9000");
     });
 
     it("respects custom MEDUSA_BACKEND_URL", () => {
       vi.stubEnv("MEDUSA_BACKEND_URL", "https://api.veloura.com");
-      const backendUrl =
-        process.env.MEDUSA_BACKEND_URL || "http://localhost:9000";
+      const backendUrl = process.env.MEDUSA_BACKEND_URL || "http://localhost:9000";
       expect(backendUrl).toBe("https://api.veloura.com");
     });
   });

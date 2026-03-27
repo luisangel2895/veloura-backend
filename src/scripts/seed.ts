@@ -1,9 +1,5 @@
 import { ExecArgs } from "@medusajs/framework/types";
-import {
-  ContainerRegistrationKeys,
-  Modules,
-  ProductStatus,
-} from "@medusajs/framework/utils";
+import { ContainerRegistrationKeys, Modules, ProductStatus } from "@medusajs/framework/utils";
 import {
   createProductCategoriesWorkflow,
   createProductsWorkflow,
@@ -24,8 +20,7 @@ import {
 const CATEGORIES = [
   {
     name: "Balconette",
-    description:
-      "Structured cups with delicate presence. Refined aesthetics and all-day comfort.",
+    description: "Structured cups with delicate presence. Refined aesthetics and all-day comfort.",
     handle: "balconette",
     is_active: true,
     is_internal: false,
@@ -372,9 +367,7 @@ export default async function seedVelouraData({ container }: ExecArgs) {
   logger.info("  ✓ Store configured (USD, EUR, GBP, MXN)");
 
   // ── 2. Create sales channel ─────────────────────────────────────
-  const { result: salesChannels } = await createSalesChannelsWorkflow(
-    container,
-  ).run({
+  const { result: salesChannels } = await createSalesChannelsWorkflow(container).run({
     input: {
       salesChannelsData: [
         {
@@ -404,9 +397,7 @@ export default async function seedVelouraData({ container }: ExecArgs) {
   logger.info(`  ✓ API key created: ${apiKey.token}`);
 
   // ── 4. Create regions ───────────────────────────────────────────
-  const paymentProviders = process.env.STRIPE_API_KEY
-    ? ["pp_stripe_stripe"]
-    : [];
+  const paymentProviders = process.env.STRIPE_API_KEY ? ["pp_stripe_stripe"] : [];
 
   const { result: regions } = await createRegionsWorkflow(container).run({
     input: {
@@ -445,9 +436,7 @@ export default async function seedVelouraData({ container }: ExecArgs) {
   logger.info("  ✓ Tax regions created");
 
   // ── 6. Create stock location ────────────────────────────────────
-  const { result: stockLocations } = await createStockLocationsWorkflow(
-    container,
-  ).run({
+  const { result: stockLocations } = await createStockLocationsWorkflow(container).run({
     input: {
       locations: [
         {
@@ -486,9 +475,7 @@ export default async function seedVelouraData({ container }: ExecArgs) {
     ],
   });
 
-  const { result: shippingProfiles } = await createShippingProfilesWorkflow(
-    container,
-  ).run({
+  const { result: shippingProfiles } = await createShippingProfilesWorkflow(container).run({
     input: {
       data: [{ name: "Veloura Standard", type: "default" }],
     },
@@ -525,9 +512,7 @@ export default async function seedVelouraData({ container }: ExecArgs) {
           { currency_code: "eur", amount: 700 },
           { currency_code: "gbp", amount: 600 },
         ],
-        rules: [
-          { attribute: "enabled_in_store", value: "true", operator: "eq" },
-        ],
+        rules: [{ attribute: "enabled_in_store", value: "true", operator: "eq" }],
       },
       {
         name: "Express Shipping",
@@ -541,9 +526,7 @@ export default async function seedVelouraData({ container }: ExecArgs) {
           { currency_code: "eur", amount: 1300 },
           { currency_code: "gbp", amount: 1100 },
         ],
-        rules: [
-          { attribute: "enabled_in_store", value: "true", operator: "eq" },
-        ],
+        rules: [{ attribute: "enabled_in_store", value: "true", operator: "eq" }],
       },
       {
         name: "Complimentary Shipping",
@@ -557,18 +540,14 @@ export default async function seedVelouraData({ container }: ExecArgs) {
           { currency_code: "eur", amount: 0 },
           { currency_code: "gbp", amount: 0 },
         ],
-        rules: [
-          { attribute: "enabled_in_store", value: "true", operator: "eq" },
-        ],
+        rules: [{ attribute: "enabled_in_store", value: "true", operator: "eq" }],
       },
     ],
   });
   logger.info("  ✓ Fulfillment & shipping options created");
 
   // ── 8. Create product categories ────────────────────────────────
-  const { result: categories } = await createProductCategoriesWorkflow(
-    container,
-  ).run({
+  const { result: categories } = await createProductCategoriesWorkflow(container).run({
     input: {
       product_categories: CATEGORIES,
     },

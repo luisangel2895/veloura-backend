@@ -74,10 +74,7 @@ describe("middleware configuration", () => {
 
       storeMiddleware(req, res, next);
 
-      expect(setHeaderCalls).toContainEqual([
-        "x-request-id",
-        "existing-id-456",
-      ]);
+      expect(setHeaderCalls).toContainEqual(["x-request-id", "existing-id-456"]);
       expect(req.requestId).toBe("existing-id-456");
       expect(next).toHaveBeenCalledOnce();
     });
@@ -94,10 +91,7 @@ describe("middleware configuration", () => {
 
       storeMiddleware(req, res, next);
 
-      expect(setHeaderCalls).toContainEqual([
-        "x-request-id",
-        "test-uuid-1234",
-      ]);
+      expect(setHeaderCalls).toContainEqual(["x-request-id", "test-uuid-1234"]);
       expect(req.requestId).toBe("test-uuid-1234");
       expect(next).toHaveBeenCalledOnce();
     });
@@ -138,7 +132,7 @@ describe("middleware configuration", () => {
       corsMiddleware(req, res, next);
 
       expect(debugFn).toHaveBeenCalledWith(
-        "[CORS] GET /store/products from origin: http://localhost:3000"
+        "[CORS] GET /store/products from origin: http://localhost:3000",
       );
       expect(next).toHaveBeenCalledOnce();
 

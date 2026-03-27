@@ -6,9 +6,7 @@ vi.mock("@medusajs/framework/utils", () => ({
   },
 }));
 
-import orderPlacedHandler, {
-  config,
-} from "../../subscribers/order-placed";
+import orderPlacedHandler, { config } from "../../subscribers/order-placed";
 
 interface MockLogger {
   info: ReturnType<typeof vi.fn>;
@@ -51,9 +49,7 @@ describe("order-placed subscriber", () => {
       await orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0]);
 
       expect(infoFn).toHaveBeenCalledOnce();
-      expect(infoFn).toHaveBeenCalledWith(
-        expect.stringContaining("order_test_123")
-      );
+      expect(infoFn).toHaveBeenCalledWith(expect.stringContaining("order_test_123"));
       expect(errorFn).not.toHaveBeenCalled();
     });
 
@@ -82,16 +78,12 @@ describe("order-placed subscriber", () => {
       };
 
       await expect(
-        orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0])
+        orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0]),
       ).resolves.toBeUndefined();
 
       expect(errorFn).toHaveBeenCalledOnce();
-      expect(errorFn).toHaveBeenCalledWith(
-        expect.stringContaining("order_err_789")
-      );
-      expect(errorFn).toHaveBeenCalledWith(
-        expect.stringContaining("Logger failed")
-      );
+      expect(errorFn).toHaveBeenCalledWith(expect.stringContaining("order_err_789"));
+      expect(errorFn).toHaveBeenCalledWith(expect.stringContaining("Logger failed"));
     });
 
     it("handles non-Error objects in catch block", async () => {
@@ -105,12 +97,10 @@ describe("order-placed subscriber", () => {
       };
 
       await expect(
-        orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0])
+        orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0]),
       ).resolves.toBeUndefined();
 
-      expect(errorFn).toHaveBeenCalledWith(
-        expect.stringContaining("string error")
-      );
+      expect(errorFn).toHaveBeenCalledWith(expect.stringContaining("string error"));
     });
   });
 });

@@ -22,7 +22,9 @@ export default defineMiddlewares({
           if (process.env.NODE_ENV !== "production") {
             const origin = req.headers.origin;
             if (origin) {
-              req.scope.resolve("logger")?.debug(`[CORS] ${req.method} ${req.path} from origin: ${origin}`);
+              req.scope
+                .resolve("logger")
+                ?.debug(`[CORS] ${req.method} ${req.path} from origin: ${origin}`);
             }
           }
           next();

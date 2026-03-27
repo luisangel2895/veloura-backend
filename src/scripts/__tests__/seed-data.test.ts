@@ -5,8 +5,7 @@ import { describe, it, expect } from "vitest";
 const CATEGORIES = [
   {
     name: "Balconette",
-    description:
-      "Structured cups with delicate presence. Refined aesthetics and all-day comfort.",
+    description: "Structured cups with delicate presence. Refined aesthetics and all-day comfort.",
     handle: "balconette",
     is_active: true,
     is_internal: false,
