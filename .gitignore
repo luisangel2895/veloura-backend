@@ -32,6 +32,9 @@ coverage/
 uploads/
 static/
 
+# Backups
+backups/
+
 # Yarn / PNPM
 .yarn/
 .pnp.*
