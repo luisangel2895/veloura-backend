@@ -21,6 +21,19 @@ services:
         condition: service_healthy
     networks:
       - veloura
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   # ── Medusa API + Admin ──────────────────────────────────────────
   medusa:
@@ -55,6 +68,19 @@ services:
       start_period: 30s
     networks:
       - veloura
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "1"
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   # ── Medusa Worker ───────────────────────────────────────────────
   medusa-worker:
@@ -79,6 +105,19 @@ services:
         condition: service_healthy
     networks:
       - veloura
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   # ── PostgreSQL ──────────────────────────────────────────────────
   postgres:
@@ -98,6 +137,19 @@ services:
       retries: 5
     networks:
       - veloura
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "1"
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   # ── Redis ───────────────────────────────────────────────────────
   redis:
@@ -114,6 +166,19 @@ services:
       retries: 5
     networks:
       - veloura
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   # ── MinIO (S3-compatible storage) ───────────────────────────────
   minio:
@@ -122,8 +187,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-veloura}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-veloura_minio_secret}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
       - minio_data:/data
     healthcheck:
@@ -133,6 +198,19 @@ services:
       retries: 5
     networks:
       - veloura
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   # ── Watchtower (auto-update base images) ────────────────────────
   watchtower:
@@ -142,11 +220,21 @@ services:
     environment:
       WATCHTOWER_CLEANUP: "true"
       WATCHTOWER_SCHEDULE: "0 0 4 * * *"
-      WATCHTOWER_MONITOR_ONLY: "true"
+      WATCHTOWER_MONITOR_ONLY: "false"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - veloura
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
 volumes:
   postgres_data:

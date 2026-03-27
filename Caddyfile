@@ -1,12 +1,17 @@
-# Replace with your actual domains
+# ── API Domain ────────────────────────────────────────────────────
 {$API_DOMAIN:api.veloura.com} {
+	encode gzip
+
 	reverse_proxy medusa:9000
 
 	header {
+		# Security headers
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
 		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		Permissions-Policy "microphone=(), camera=(), geolocation=(), payment=()"
+		X-Permitted-Cross-Domain-Policies none
 		-Server
 	}
 
@@ -18,14 +23,20 @@
 	}
 }
 
+# ── Admin Domain ──────────────────────────────────────────────────
 {$ADMIN_DOMAIN:admin.veloura.com} {
+	encode gzip
+
 	reverse_proxy medusa:9000
 
 	header {
+		# Security headers
 		X-Content-Type-Options nosniff
 		X-Frame-Options SAMEORIGIN
 		Referrer-Policy strict-origin-when-cross-origin
 		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		Permissions-Policy "microphone=(), camera=(), geolocation=(), payment=()"
+		X-Permitted-Cross-Domain-Policies none
 		-Server
 	}
 
