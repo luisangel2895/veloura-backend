@@ -9,17 +9,14 @@ export default async function orderPlacedHandler({
   const orderId = event.data.id;
 
   try {
-    logger.info(`[Veloura] Order placed`, {
-      orderId,
-      timestamp: new Date().toISOString(),
-      eventName: event.name,
-    });
+    logger.info(
+      `[Veloura] Order placed: ${orderId} at ${new Date().toISOString()}`
+    );
   } catch (error) {
-    logger.error(`[Veloura] Failed to process order.placed event`, {
-      orderId,
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(
+      `[Veloura] Failed to process order.placed event for ${orderId}: ${message}`
+    );
   }
 }
 

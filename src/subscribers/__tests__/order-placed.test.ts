@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
 
-// Mock the Medusa framework utils
 vi.mock("@medusajs/framework/utils", () => ({
   ContainerRegistrationKeys: {
     LOGGER: "logger",
@@ -52,15 +51,13 @@ describe("order-placed subscriber", () => {
       await orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0]);
 
       expect(infoFn).toHaveBeenCalledOnce();
-      expect(infoFn).toHaveBeenCalledWith("[Veloura] Order placed", {
-        orderId: "order_test_123",
-        timestamp: expect.any(String),
-        eventName: "order.placed",
-      });
+      expect(infoFn).toHaveBeenCalledWith(
+        expect.stringContaining("order_test_123")
+      );
       expect(errorFn).not.toHaveBeenCalled();
     });
 
-    it("logs with ISO timestamp format", async () => {
+    it("logs with ISO timestamp in the message", async () => {
       const infoFn = vi.fn();
       const args: MockSubscriberArgs = {
         event: { data: { id: "order_456" }, name: "order.placed" },
@@ -69,9 +66,9 @@ describe("order-placed subscriber", () => {
 
       await orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0]);
 
-      const callArgs = infoFn.mock.calls[0][1] as { timestamp: string };
-      expect(() => new Date(callArgs.timestamp)).not.toThrow();
-      expect(new Date(callArgs.timestamp).toISOString()).toBe(callArgs.timestamp);
+      const logMessage = infoFn.mock.calls[0][0] as string;
+      expect(logMessage).toContain("order_456");
+      expect(logMessage).toMatch(/\d{4}-\d{2}-\d{2}T/);
     });
 
     it("handles errors gracefully without throwing", async () => {
@@ -90,12 +87,10 @@ describe("order-placed subscriber", () => {
 
       expect(errorFn).toHaveBeenCalledOnce();
       expect(errorFn).toHaveBeenCalledWith(
-        "[Veloura] Failed to process order.placed event",
-        {
-          orderId: "order_err_789",
-          error: "Logger failed",
-          stack: expect.any(String),
-        }
+        expect.stringContaining("order_err_789")
+      );
+      expect(errorFn).toHaveBeenCalledWith(
+        expect.stringContaining("Logger failed")
       );
     });
 
@@ -114,12 +109,7 @@ describe("order-placed subscriber", () => {
       ).resolves.toBeUndefined();
 
       expect(errorFn).toHaveBeenCalledWith(
-        "[Veloura] Failed to process order.placed event",
-        {
-          orderId: "order_str_err",
-          error: "string error",
-          stack: undefined,
-        }
+        expect.stringContaining("string error")
       );
     });
   });
