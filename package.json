@@ -1,0 +1,41 @@
+{
+  "name": "veloura-backend",
+  "version": "0.1.0",
+  "description": "Veloura — Luxury lingerie e-commerce backend powered by Medusa v2",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "medusa develop",
+    "start": "medusa start",
+    "build": "medusa build",
+    "seed": "medusa exec ./src/scripts/seed.ts",
+    "db:setup": "medusa db:setup",
+    "db:migrate": "medusa db:migrate",
+    "db:rollback": "medusa db:rollback",
+    "db:generate": "medusa db:generate",
+    "db:sync-links": "medusa db:sync-links",
+    "user:create": "medusa user",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,json}\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@medusajs/admin-sdk": "2.13.5",
+    "@medusajs/cli": "2.13.5",
+    "@medusajs/framework": "2.13.5",
+    "@medusajs/medusa": "2.13.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@medusajs/test-utils": "2.13.5",
+    "@types/node": "^20.17.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.8.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0"
+  }
+}

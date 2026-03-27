@@ -1,0 +1,38 @@
+# Replace with your actual domains
+{$API_DOMAIN:api.veloura.com} {
+	reverse_proxy medusa:9000
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		-Server
+	}
+
+	log {
+		output file /data/access-api.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+	}
+}
+
+{$ADMIN_DOMAIN:admin.veloura.com} {
+	reverse_proxy medusa:9000
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		-Server
+	}
+
+	log {
+		output file /data/access-admin.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+	}
+}
