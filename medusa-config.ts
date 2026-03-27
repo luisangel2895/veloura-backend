@@ -66,8 +66,16 @@ export default defineConfig({
       storeCors,
       adminCors,
       authCors,
-      jwtSecret: process.env.JWT_SECRET || "supersecret",
-      cookieSecret: process.env.COOKIE_SECRET || "supersecret",
+      jwtSecret: (() => {
+        const secret = process.env.JWT_SECRET;
+        if (!secret && isProduction) throw new Error("JWT_SECRET is required in production");
+        return secret || "supersecret";
+      })(),
+      cookieSecret: (() => {
+        const secret = process.env.COOKIE_SECRET;
+        if (!secret && isProduction) throw new Error("COOKIE_SECRET is required in production");
+        return secret || "supersecret";
+      })(),
       jwtExpiresIn: "7d",
       compression: {
         enabled: true,
