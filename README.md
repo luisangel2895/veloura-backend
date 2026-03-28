@@ -137,6 +137,12 @@ chmod +x scripts/backup-db.sh scripts/restore-db.sh
 
 ---
 
+## Architecture
+
+> **[View the full interactive architecture diagram →](https://luisangel2895.github.io/veloura/)**
+
+---
+
 ## Project Structure
 
 ```
