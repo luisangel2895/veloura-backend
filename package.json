@@ -7,7 +7,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "medusa develop",
+    "dev": "lsof -ti:9000 | xargs kill -9 2>/dev/null; medusa develop",
     "start": "medusa start",
     "build": "medusa build",
     "seed": "medusa exec ./src/scripts/seed.ts",
