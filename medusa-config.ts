@@ -10,8 +10,25 @@ const storeCors = process.env.STORE_CORS || "http://localhost:3000";
 const adminCors = process.env.ADMIN_CORS || "http://localhost:9000";
 const authCors = process.env.AUTH_CORS || `${storeCors},${adminCors}`;
 const redisUrl = process.env.REDIS_URL;
+const useSecureCookies = process.env.COOKIE_SECURE === "true";
 
-const modules = [];
+const modules: Record<string, unknown>[] = [];
+
+// ── File storage: use public backend URL for uploaded assets ─────
+modules.push({
+  resolve: "@medusajs/medusa/file",
+  options: {
+    providers: [
+      {
+        resolve: "@medusajs/medusa/file-local",
+        id: "local",
+        options: {
+          backend_url: `${backendUrl}/static`,
+        },
+      },
+    ],
+  },
+});
 
 // ── Payment: Stripe ──────────────────────────────────────────────
 if (process.env.STRIPE_API_KEY) {
@@ -56,7 +73,7 @@ export default defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL!,
     databaseLogging: false,
-    databaseDriverOptions: isProduction
+    databaseDriverOptions: process.env.DATABASE_SSL === "true"
       ? { connection: { ssl: { rejectUnauthorized: false } } }
       : {},
     redisUrl,
@@ -83,10 +100,15 @@ export default defineConfig({
         threshold: 1024,
       },
     },
+    cookieOptions: {
+      secure: useSecureCookies,
+      sameSite: useSecureCookies ? "none" as const : "lax" as const,
+      httpOnly: true,
+    },
   },
   admin: {
     backendUrl,
-    path: "/app",
+    path: "/veloura",
   },
   modules,
 });
