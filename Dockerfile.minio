@@ -1,0 +1,29 @@
+# ── Custom MinIO image for legacy CPUs (no x86-64-v2 baseline) ───
+# Official minio/minio images use a glibc base (UBI-micro) that requires
+# x86-64-v2 since late 2024 — this VPS QEMU vCPU only exposes baseline
+# x86-64-v1 and crashes with "Fatal glibc error: CPU does not support
+# x86-64-v2".
+#
+# The official MinIO binaries themselves are statically linked Go, so they
+# run fine on this CPU. We just need to package them on top of Alpine
+# (musl libc, no x86-64-v2 requirement) instead of UBI.
+#
+# Built locally from this Dockerfile (no upstream image with both `minio`
+# and `mc` binaries on Alpine exists at the moment).
+
+FROM alpine:3.20
+
+RUN apk add --no-cache ca-certificates bash curl tini && \
+    curl -fsSL https://dl.min.io/server/minio/release/linux-amd64/minio -o /usr/bin/minio && \
+    chmod +x /usr/bin/minio && \
+    curl -fsSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/bin/mc && \
+    chmod +x /usr/bin/mc && \
+    /usr/bin/minio --version && \
+    /usr/bin/mc --version
+
+ENV MINIO_UPDATE=off
+WORKDIR /data
+EXPOSE 9000 9001
+
+ENTRYPOINT ["/sbin/tini", "--", "/usr/bin/minio"]
+CMD ["server", "/data", "--console-address", ":9001"]

@@ -1,47 +1,35 @@
-# ── API Domain ────────────────────────────────────────────────────
-{$API_DOMAIN:api.veloura.com} {
+# ── HTTP-only on server IP (no domain yet, no HTTPS) ──────────────
+# Path-based routing — when a real domain is added, switch to the
+# subdomain blocks (api.veloura.com / admin.veloura.com) and re-enable
+# HSTS in the headers below.
+:80 {
 	encode gzip
 
-	reverse_proxy medusa:9000
-
-	header {
-		# Security headers
-		X-Content-Type-Options nosniff
-		X-Frame-Options DENY
-		Referrer-Policy strict-origin-when-cross-origin
-		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-		Permissions-Policy "microphone=(), camera=(), geolocation=(), payment=()"
-		X-Permitted-Cross-Domain-Policies none
-		-Server
-	}
-
-	log {
-		output file /data/access-api.log {
-			roll_size 10mb
-			roll_keep 5
+	# MinIO media files (S3-compatible). handle_path strips /media before
+	# forwarding, so /media/medusa-media/foo.jpg → minio:9000/medusa-media/foo.jpg
+	handle_path /media/* {
+		reverse_proxy minio:9000 {
+			header_up Host {upstream_hostport}
 		}
 	}
-}
 
-# ── Admin Domain ──────────────────────────────────────────────────
-{$ADMIN_DOMAIN:admin.veloura.com} {
-	encode gzip
-
-	reverse_proxy medusa:9000
+	# Everything else → Medusa (API at /, admin at /veloura)
+	handle {
+		reverse_proxy medusa:9000
+	}
 
 	header {
-		# Security headers
+		# Security headers (HSTS omitted because we serve plain HTTP)
 		X-Content-Type-Options nosniff
 		X-Frame-Options SAMEORIGIN
 		Referrer-Policy strict-origin-when-cross-origin
-		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
 		Permissions-Policy "microphone=(), camera=(), geolocation=(), payment=()"
 		X-Permitted-Cross-Domain-Policies none
 		-Server
 	}
 
 	log {
-		output file /data/access-admin.log {
+		output file /data/access.log {
 			roll_size 10mb
 			roll_keep 5
 		}

@@ -14,21 +14,44 @@ const useSecureCookies = process.env.COOKIE_SECURE === "true";
 
 const modules: Record<string, unknown>[] = [];
 
-// ── File storage: use public backend URL for uploaded assets ─────
-modules.push({
-  resolve: "@medusajs/medusa/file",
-  options: {
-    providers: [
-      {
-        resolve: "@medusajs/medusa/file-local",
-        id: "local",
-        options: {
-          backend_url: `${backendUrl}/static`,
+// ── File storage: S3 (MinIO in prod) with file-local fallback for dev ─
+if (process.env.S3_BUCKET) {
+  modules.push({
+    resolve: "@medusajs/medusa/file",
+    options: {
+      providers: [
+        {
+          resolve: "@medusajs/file-s3",
+          id: "s3",
+          options: {
+            file_url: process.env.S3_FILE_URL,
+            access_key_id: process.env.S3_ACCESS_KEY_ID,
+            secret_access_key: process.env.S3_SECRET_ACCESS_KEY,
+            region: process.env.S3_REGION || "us-east-1",
+            bucket: process.env.S3_BUCKET,
+            endpoint: process.env.S3_ENDPOINT,
+            additional_client_config: { forcePathStyle: true },
+          },
         },
-      },
-    ],
-  },
-});
+      ],
+    },
+  });
+} else {
+  modules.push({
+    resolve: "@medusajs/medusa/file",
+    options: {
+      providers: [
+        {
+          resolve: "@medusajs/medusa/file-local",
+          id: "local",
+          options: {
+            backend_url: `${backendUrl}/static`,
+          },
+        },
+      ],
+    },
+  });
+}
 
 // ── Payment: Stripe ──────────────────────────────────────────────
 if (process.env.STRIPE_API_KEY) {

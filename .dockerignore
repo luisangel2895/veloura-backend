@@ -1,6 +1,6 @@
-node_modules
-.medusa
-dist
+# node_modules, .medusa and dist are pre-built on the host (see Dockerfile)
+# because running `npm ci` and `npm run build` inside a Docker build container
+# is pathologically slow on this VPS — likely a kernel/libuv interaction.
 .env
 .env.*
 !.env.example

@@ -12,7 +12,11 @@ FILENAME="veloura_medusa_${TIMESTAMP}.sql.gz"
 mkdir -p "$BACKUP_DIR"
 
 if [ "$MODE" = "docker" ]; then
-  docker compose -f docker-compose.prod.yml exec -T postgres \
+  # Pass --env-file when .env.prod exists so `docker compose` doesn't print
+  # noisy "variable not set" warnings while parsing the YAML.
+  ENV_FILE_ARG=""
+  [ -f .env.prod ] && ENV_FILE_ARG="--env-file .env.prod"
+  docker compose -f docker-compose.prod.yml $ENV_FILE_ARG exec -T postgres \
     pg_dump -U "${POSTGRES_USER:-veloura}" "${POSTGRES_DB:-veloura_medusa}" \
     | gzip > "${BACKUP_DIR}/${FILENAME}"
 elif [ "$MODE" = "local" ]; then

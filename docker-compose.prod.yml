@@ -1,17 +1,15 @@
 ## Docker Compose for VPS production deployment
 ## All services run in Docker including Medusa
-## Usage: docker compose -f docker-compose.prod.yml up -d
+## Usage: docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 
 services:
-  # ── Reverse Proxy (HTTPS auto) ──────────────────────────────────
+  # ── Reverse Proxy (HTTP only — no domain yet) ───────────────────
   caddy:
     image: caddy:2-alpine
     container_name: veloura-caddy
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
-      - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -40,6 +38,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: veloura-medusa:latest
     container_name: veloura-medusa
     restart: unless-stopped
     environment:
@@ -55,11 +54,21 @@ services:
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
       - MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}
       - WORKER_MODE=server
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_REGION=${S3_REGION}
+      - S3_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - S3_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - S3_FILE_URL=${S3_FILE_URL}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
       interval: 15s
@@ -83,10 +92,10 @@ services:
         max-file: "5"
 
   # ── Medusa Worker ───────────────────────────────────────────────
+  # Reuses the image built by the `medusa` service — no separate build,
+  # avoids docker compose running two parallel `npm ci` (which deadlocks).
   medusa-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: veloura-medusa:latest
     container_name: veloura-worker
     restart: unless-stopped
     environment:
@@ -98,11 +107,25 @@ services:
       - STRIPE_API_KEY=${STRIPE_API_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
       - WORKER_MODE=worker
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_REGION=${S3_REGION}
+      - S3_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - S3_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - S3_FILE_URL=${S3_FILE_URL}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'medusa start' > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     networks:
       - veloura
     deploy:
@@ -152,11 +175,15 @@ services:
         max-file: "5"
 
   # ── Redis ───────────────────────────────────────────────────────
+  # appendfsync everysec is REQUIRED on this VPS — the disk is slow and
+  # default fsync (always) saturates IO and stalls Medusa requests.
+  # maxmemory-policy=noeviction is required by Medusa (workflow engine
+  # state must not be silently evicted under memory pressure).
   redis:
     image: redis:7-alpine
     container_name: veloura-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --appendfsync everysec --maxmemory 256mb --maxmemory-policy noeviction
     volumes:
       - redis_data:/data
     healthcheck:
@@ -181,14 +208,24 @@ services:
         max-file: "5"
 
   # ── MinIO (S3-compatible storage) ───────────────────────────────
+  # Built from Dockerfile.minio (Alpine + statically-linked official MinIO
+  # binary) because the official minio/minio image requires x86-64-v2 CPU
+  # which this VPS QEMU vCPU does not expose. See Dockerfile.minio for
+  # the full story.
+  # No host port exposure — only reachable on the internal `veloura`
+  # network. Public access goes through Caddy /media/*.
   minio:
-    image: minio/minio:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.minio
+    image: veloura-minio:latest
     container_name: veloura-minio
     restart: unless-stopped
-    command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      # Auto-configure mc alias `local` for the healthcheck (mc reads MC_HOST_<alias>)
+      MC_HOST_local: http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@127.0.0.1:9000
     volumes:
       - minio_data:/data
     healthcheck:
@@ -196,25 +233,56 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
     networks:
       - veloura
     deploy:
       resources:
         limits:
-          cpus: "1"
-          memory: 1G
-        reservations:
           cpus: "0.5"
           memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
     logging:
       driver: "json-file"
       options:
         max-size: "50m"
         max-file: "5"
 
+  # ── MinIO bucket initialization (runs once, then exits) ─────────
+  # Creates the medusa-media bucket and makes it public read-only.
+  # Reuses the custom veloura-minio image (which bundles `mc`) instead of
+  # minio/mc:latest, since that image has the same x86-64-v2 issue.
+  minio-init:
+    image: veloura-minio:latest
+    container_name: veloura-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MC_HOST_local: http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000
+    entrypoint: >
+      /bin/sh -c "
+      mc mb --ignore-existing local/medusa-media &&
+      mc anonymous set download local/medusa-media &&
+      echo 'Bucket medusa-media ready (public download)';
+      "
+    networks:
+      - veloura
+    restart: "no"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+
   # ── Watchtower (auto-update base images) ────────────────────────
+  # Uses nickfedor/watchtower (maintained fork) — the original
+  # containrrr/watchtower is archived and ships an old Docker API client
+  # that this server's daemon refuses ("client version 1.25 is too old").
   watchtower:
-    image: containrrr/watchtower
+    image: nickfedor/watchtower:latest
     container_name: veloura-watchtower
     restart: unless-stopped
     environment:
