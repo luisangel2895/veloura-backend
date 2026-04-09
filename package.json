@@ -4,13 +4,16 @@
   "description": "Veloura — Luxury lingerie e-commerce backend powered by Medusa v2",
   "private": true,
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "npm": ">=10"
   },
+  "engineStrict": true,
   "scripts": {
-    "dev": "lsof -ti:9000 | xargs kill -9 2>/dev/null; medusa develop",
+    "dev": "fuser -k -n tcp 9000 2>/dev/null; medusa develop",
     "start": "medusa start",
     "build": "medusa build",
     "seed": "medusa exec ./src/scripts/seed.ts",
+    "seed:prod": "medusa exec ./src/scripts/seed.js",
     "db:setup": "medusa db:setup",
     "db:migrate": "medusa db:migrate",
     "db:rollback": "medusa db:rollback",
@@ -22,9 +25,12 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json}\"",
     "typecheck": "tsc --noEmit",
+    "typecheck:test": "tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "backup": "./scripts/backup-db.sh docker",
+    "restore": "./scripts/restore-db.sh"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.13.5",

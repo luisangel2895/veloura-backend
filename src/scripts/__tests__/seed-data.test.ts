@@ -1,351 +1,28 @@
 import { describe, it, expect } from "vitest";
 
-// ── Seed data replicated from seed.ts for validation ────────────────
-
-const CATEGORIES = [
-  {
-    name: "Balconette",
-    description: "Structured cups with delicate presence. Refined aesthetics and all-day comfort.",
-    handle: "balconette",
-    is_active: true,
-    is_internal: false,
-    rank: 0,
-  },
-  {
-    name: "Bodysuits",
-    description:
-      "One-piece silhouettes for layered refinement. Precision tailoring with editorial appeal.",
-    handle: "bodysuits",
-    is_active: true,
-    is_internal: false,
-    rank: 1,
-  },
-  {
-    name: "Bridal",
-    description:
-      "Luminous pieces for rituals and celebrations. Soft tones with ceremony aesthetics.",
-    handle: "bridal",
-    is_active: true,
-    is_internal: false,
-    rank: 2,
-  },
-  {
-    name: "Lounge",
-    description:
-      "Serene comfort with editorial sensibility. Sophisticated textures for quiet indulgence.",
-    handle: "lounge",
-    is_active: true,
-    is_internal: false,
-    rank: 3,
-  },
-];
-
-interface SeedProduct {
-  title: string;
-  handle: string;
-  tagline: string;
-  categoryHandle: string;
-  priceCents: number;
-  sizes: string[];
-  tags: string[];
-  description: string;
-  details: string[];
-  images: string[];
-  palette: [string, string];
-  featured: boolean;
-}
-
-const PRODUCTS: SeedProduct[] = [
-  {
-    title: "Noir Essence Balconette",
-    handle: "noir-essence-balconette",
-    tagline: "Architectural lift in satin and mesh.",
-    categoryHandle: "balconette",
-    priceCents: 11200,
-    sizes: ["XS", "S", "M", "L"],
-    tags: ["signature", "mesh", "evening"],
-    description: "Architectural lift in satin and mesh.",
-    details: [
-      "Underwire support with soft cup reinforcement",
-      "Adjustable straps and brushed hardware in soft gold",
-      "Lightweight power mesh back for shape retention",
-    ],
-    images: [
-      "https://picsum.photos/seed/noir-essence-balconette-1",
-      "https://picsum.photos/seed/noir-essence-balconette-2",
-      "https://picsum.photos/seed/noir-essence-balconette-3",
-    ],
-    palette: ["#1b1a1e", "#7e6843"],
-    featured: true,
-  },
-  {
-    title: "Velvet Trace Balconette",
-    handle: "velvet-trace-balconette",
-    tagline: "A clean demi profile with velvet-soft trim.",
-    categoryHandle: "balconette",
-    priceCents: 11800,
-    sizes: ["S", "M", "L", "XL"],
-    tags: ["best-seller", "velvet-trim", "daily-luxury"],
-    description: "A clean demi profile with velvet-soft trim.",
-    details: [
-      "Matte stretch satin with velvet binding",
-      "Wide side wings for a smoother frame",
-      "Engineered to layer under plunging silhouettes",
-    ],
-    images: [
-      "https://picsum.photos/seed/velvet-trace-balconette-1",
-      "https://picsum.photos/seed/velvet-trace-balconette-2",
-      "https://picsum.photos/seed/velvet-trace-balconette-3",
-    ],
-    palette: ["#2b2025", "#9b7d51"],
-    featured: true,
-  },
-  {
-    title: "Lune Ivory Balconette",
-    handle: "lune-ivory-balconette",
-    tagline: "Soft ivory for understated ceremony dressing.",
-    categoryHandle: "bridal",
-    priceCents: 12400,
-    sizes: ["XS", "S", "M", "L"],
-    tags: ["bridal", "ivory", "ceremony"],
-    description: "Soft ivory for understated ceremony dressing.",
-    details: [
-      "Low-profile cups that sit cleanly under satin gowns",
-      "Breathable sheer side panels for comfort",
-      "Discreet finish lines for a nearly invisible fit",
-    ],
-    images: [
-      "https://picsum.photos/seed/lune-ivory-balconette-1",
-      "https://picsum.photos/seed/lune-ivory-balconette-2",
-      "https://picsum.photos/seed/lune-ivory-balconette-3",
-    ],
-    palette: ["#f5ede2", "#c0a26b"],
-    featured: true,
-  },
-  {
-    title: "Champagne Glow Bodysuit",
-    handle: "champagne-glow-bodysuit",
-    tagline: "Fluid shimmer and sculpted vertical seams.",
-    categoryHandle: "bodysuits",
-    priceCents: 16800,
-    sizes: ["XS", "S", "M", "L"],
-    tags: ["bridal", "bodysuit", "shimmer"],
-    description: "Fluid shimmer and sculpted vertical seams.",
-    details: [
-      "Snap closure with smooth gusset finish",
-      "Moderate compression through the waist",
-      "Works as an underpinning or styled outer layer",
-    ],
-    images: [
-      "https://picsum.photos/seed/champagne-glow-bodysuit-1",
-      "https://picsum.photos/seed/champagne-glow-bodysuit-2",
-      "https://picsum.photos/seed/champagne-glow-bodysuit-3",
-    ],
-    palette: ["#dfd3c1", "#a98554"],
-    featured: true,
-  },
-  {
-    title: "Obsidian Line Bodysuit",
-    handle: "obsidian-line-bodysuit",
-    tagline: "Graphic transparency with a tailored base.",
-    categoryHandle: "bodysuits",
-    priceCents: 17200,
-    sizes: ["XS", "S", "M", "L", "XL"],
-    tags: ["editorial", "sheer", "night-out"],
-    description: "Graphic transparency with a tailored base.",
-    details: [
-      "Dual-layer front for support without bulk",
-      "Invisible elastic edges keep the line minimal",
-      "Ideal under blazers, shirting and open knits",
-    ],
-    images: [
-      "https://picsum.photos/seed/obsidian-line-bodysuit-1",
-      "https://picsum.photos/seed/obsidian-line-bodysuit-2",
-      "https://picsum.photos/seed/obsidian-line-bodysuit-3",
-    ],
-    palette: ["#111214", "#8c7042"],
-    featured: false,
-  },
-  {
-    title: "Silk Vow Slip Set",
-    handle: "silk-vow-slip-set",
-    tagline: "A bridal-ready pairing for slow mornings.",
-    categoryHandle: "bridal",
-    priceCents: 19600,
-    sizes: ["XS", "S", "M", "L", "XL"],
-    tags: ["bridal", "giftable", "set"],
-    description: "A bridal-ready pairing for slow mornings.",
-    details: [
-      "Includes matching brief in the same silk-touch finish",
-      "Bias-inspired shape that skims instead of clings",
-      "Packed with a soft storage pouch for gifting",
-    ],
-    images: [
-      "https://picsum.photos/seed/silk-vow-slip-set-1",
-      "https://picsum.photos/seed/silk-vow-slip-set-2",
-      "https://picsum.photos/seed/silk-vow-slip-set-3",
-    ],
-    palette: ["#f2e8d8", "#b99260"],
-    featured: false,
-  },
-  {
-    title: "Midnight Whisper Robe",
-    handle: "midnight-whisper-robe",
-    tagline: "Longline lounge with tonal sheen.",
-    categoryHandle: "lounge",
-    priceCents: 15400,
-    sizes: ["S", "M", "L", "XL"],
-    tags: ["robe", "lounge", "soft-sheen"],
-    description: "Longline lounge with tonal sheen.",
-    details: [
-      "Detachable belt with interior tie for secure wear",
-      "Wide sleeves cut for easy layering",
-      "Soft drape with a cool-touch finish",
-    ],
-    images: [
-      "https://picsum.photos/seed/midnight-whisper-robe-1",
-      "https://picsum.photos/seed/midnight-whisper-robe-2",
-      "https://picsum.photos/seed/midnight-whisper-robe-3",
-    ],
-    palette: ["#1d2028", "#867150"],
-    featured: true,
-  },
-  {
-    title: "Cashmere Hush Bralette",
-    handle: "cashmere-hush-bralette",
-    tagline: "Relaxed support for quiet indulgence.",
-    categoryHandle: "lounge",
-    priceCents: 8600,
-    sizes: ["XS", "S", "M", "L"],
-    tags: ["bralette", "soft-touch", "travel"],
-    description: "Relaxed support for quiet indulgence.",
-    details: [
-      "Wire-free construction with removable pads",
-      "Wide underband for comfort through long wear",
-      "Pairs with lounge shorts or robe layers",
-    ],
-    images: [
-      "https://picsum.photos/seed/cashmere-hush-bralette-1",
-      "https://picsum.photos/seed/cashmere-hush-bralette-2",
-      "https://picsum.photos/seed/cashmere-hush-bralette-3",
-    ],
-    palette: ["#8f8076", "#c0a06d"],
-    featured: false,
-  },
-  {
-    title: "Moon Satin Tap Short",
-    handle: "moon-satin-tap-short",
-    tagline: "Lightweight lounge built for layering.",
-    categoryHandle: "lounge",
-    priceCents: 6400,
-    sizes: ["XS", "S", "M", "L", "XL"],
-    tags: ["short", "set-ready", "satin"],
-    description: "Lightweight lounge built for layering.",
-    details: [
-      "Bias-cut inspired leg opening for movement",
-      "Smooth waistband with hidden elastic",
-      "Pairs naturally with lounge bras and robes",
-    ],
-    images: [
-      "https://picsum.photos/seed/moon-satin-tap-short-1",
-      "https://picsum.photos/seed/moon-satin-tap-short-2",
-      "https://picsum.photos/seed/moon-satin-tap-short-3",
-    ],
-    palette: ["#d7c7bb", "#9f7c4b"],
-    featured: false,
-  },
-  {
-    title: "Gilded Veil Teddy",
-    handle: "gilded-veil-teddy",
-    tagline: "A sheer bridal one-piece with luminous trim.",
-    categoryHandle: "bridal",
-    priceCents: 14800,
-    sizes: ["XS", "S", "M", "L"],
-    tags: ["bridal", "teddy", "giftable"],
-    description: "A sheer bridal one-piece with luminous trim.",
-    details: [
-      "Sheer body with modestly lined bust",
-      "Soft leg curve with no harsh elastic marks",
-      "Designed to sit smoothly under robes and slips",
-    ],
-    images: [
-      "https://picsum.photos/seed/gilded-veil-teddy-1",
-      "https://picsum.photos/seed/gilded-veil-teddy-2",
-      "https://picsum.photos/seed/gilded-veil-teddy-3",
-    ],
-    palette: ["#f7f0e4", "#b08b57"],
-    featured: false,
-  },
-  {
-    title: "Atelier Shadow Corset",
-    handle: "atelier-shadow-corset",
-    tagline: "Modern contouring with softened structure.",
-    categoryHandle: "bodysuits",
-    priceCents: 18200,
-    sizes: ["XS", "S", "M", "L"],
-    tags: ["corset", "structured", "occasion"],
-    description: "Modern contouring with softened structure.",
-    details: [
-      "Flexible boning for shape without stiffness",
-      "Front neckline cut to layer under jackets",
-      "Back paneling balances compression and comfort",
-    ],
-    images: [
-      "https://picsum.photos/seed/atelier-shadow-corset-1",
-      "https://picsum.photos/seed/atelier-shadow-corset-2",
-      "https://picsum.photos/seed/atelier-shadow-corset-3",
-    ],
-    palette: ["#16161a", "#6d5937"],
-    featured: true,
-  },
-  {
-    title: "Soft Flame Triangle Set",
-    handle: "soft-flame-triangle-set",
-    tagline: "Minimal coverage in a warm bronze wash.",
-    categoryHandle: "balconette",
-    priceCents: 9800,
-    sizes: ["XS", "S", "M", "L", "XL"],
-    tags: ["set", "minimal", "bronze"],
-    description: "Minimal coverage in a warm bronze wash.",
-    details: [
-      "Triangle cup with refined elastic finish",
-      "Matching brief included in the set price",
-      "Light support suited to all-day wear",
-    ],
-    images: [
-      "https://picsum.photos/seed/soft-flame-triangle-set-1",
-      "https://picsum.photos/seed/soft-flame-triangle-set-2",
-      "https://picsum.photos/seed/soft-flame-triangle-set-3",
-    ],
-    palette: ["#5f4a3d", "#b48a56"],
-    featured: false,
-  },
-];
+// Import the ACTUAL data from the seed script (not a copy-paste of it).
+// The previous version of this file inlined the CATEGORIES and PRODUCTS
+// arrays, which meant tests passed even when seed.ts was broken. Now we
+// import the named exports so any change to seed.ts is checked.
+import { CATEGORIES, PRODUCTS, type SeedProduct } from "../seed";
 
 const VALID_SIZES = ["XS", "S", "M", "L", "XL"];
 const VALID_CATEGORY_HANDLES = CATEGORIES.map((c) => c.handle);
 
 // ── Category Tests ──────────────────────────────────────────────────
 
-describe("seed data - categories", () => {
+describe("seed data — categories", () => {
   it("should have exactly 4 categories", () => {
     expect(CATEGORIES).toHaveLength(4);
   });
 
   it("all categories have required fields", () => {
     for (const cat of CATEGORIES) {
-      expect(cat.name).toBeDefined();
+      expect(cat.name).toBeTruthy();
       expect(typeof cat.name).toBe("string");
-      expect(cat.name.length).toBeGreaterThan(0);
-
-      expect(cat.handle).toBeDefined();
+      expect(cat.handle).toBeTruthy();
       expect(typeof cat.handle).toBe("string");
-      expect(cat.handle.length).toBeGreaterThan(0);
-
-      expect(cat.description).toBeDefined();
-      expect(typeof cat.description).toBe("string");
-      expect(cat.description.length).toBeGreaterThan(0);
-
+      expect(cat.description).toBeTruthy();
       expect(cat.is_active).toBe(true);
     }
   });
@@ -363,47 +40,24 @@ describe("seed data - categories", () => {
 
 // ── Product Tests ───────────────────────────────────────────────────
 
-describe("seed data - products", () => {
+describe("seed data — products", () => {
   it("should have exactly 12 products", () => {
     expect(PRODUCTS).toHaveLength(12);
   });
 
   it("all products have required fields", () => {
     for (const product of PRODUCTS) {
-      expect(product.title).toBeDefined();
-      expect(typeof product.title).toBe("string");
-      expect(product.title.length).toBeGreaterThan(0);
-
-      expect(product.handle).toBeDefined();
-      expect(typeof product.handle).toBe("string");
-
-      expect(product.tagline).toBeDefined();
-      expect(typeof product.tagline).toBe("string");
-
-      expect(product.categoryHandle).toBeDefined();
-      expect(typeof product.categoryHandle).toBe("string");
-
-      expect(product.priceCents).toBeDefined();
+      expect(product.title).toBeTruthy();
+      expect(product.handle).toBeTruthy();
+      expect(product.tagline).toBeTruthy();
+      expect(product.categoryHandle).toBeTruthy();
       expect(typeof product.priceCents).toBe("number");
-
-      expect(product.sizes).toBeDefined();
       expect(Array.isArray(product.sizes)).toBe(true);
-
-      expect(product.tags).toBeDefined();
       expect(Array.isArray(product.tags)).toBe(true);
-
-      expect(product.description).toBeDefined();
-      expect(typeof product.description).toBe("string");
-
-      expect(product.details).toBeDefined();
+      expect(product.description).toBeTruthy();
       expect(Array.isArray(product.details)).toBe(true);
-
-      expect(product.images).toBeDefined();
       expect(Array.isArray(product.images)).toBe(true);
-
-      expect(product.palette).toBeDefined();
       expect(Array.isArray(product.palette)).toBe(true);
-
       expect(typeof product.featured).toBe("boolean");
     }
   });
@@ -440,6 +94,19 @@ describe("seed data - products", () => {
     }
   });
 
+  it("all picsum.photos URLs include explicit dimensions (width/height)", () => {
+    // Regression test for the bug where picsum URLs without dimensions
+    // returned 404 in production. The expected pattern is `/<w>/<h>`
+    // appended to the URL.
+    for (const product of PRODUCTS) {
+      for (const url of product.images) {
+        if (url.includes("picsum.photos")) {
+          expect(url).toMatch(/picsum\.photos\/seed\/[^/]+\/\d+\/\d+/);
+        }
+      }
+    }
+  });
+
   it("all product palettes have exactly 2 colors in hex format", () => {
     for (const product of PRODUCTS) {
       expect(product.palette).toHaveLength(2);
@@ -472,14 +139,18 @@ describe("seed data - products", () => {
     }
   });
 
-  it("at least 1 product is featured", () => {
-    const featuredCount = PRODUCTS.filter((p) => p.featured).length;
-    expect(featuredCount).toBeGreaterThanOrEqual(1);
+  it("at least one product is featured", () => {
+    const featured = PRODUCTS.filter((p) => p.featured);
+    expect(featured.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("featured products count matches expected value", () => {
-    const featured = PRODUCTS.filter((p) => p.featured);
-    expect(featured).toHaveLength(6);
+  it("description is meaningfully longer than tagline", () => {
+    // The previous seed had description === tagline for every product.
+    // Descriptions should be at least 2x as long as the tagline so the
+    // storefront actually has copy to render.
+    for (const product of PRODUCTS) {
+      expect(product.description.length).toBeGreaterThan(product.tagline.length * 2);
+    }
   });
 
   it("all product details are non-empty string arrays", () => {
@@ -497,5 +168,20 @@ describe("seed data - products", () => {
     for (const handle of VALID_CATEGORY_HANDLES) {
       expect(categoriesUsed.has(handle)).toBe(true);
     }
+  });
+
+  it("product handle and SKU prefix are URL-safe and consistent", () => {
+    for (const product of PRODUCTS) {
+      // The seed builds variant SKUs as `${handle}-${size.toLowerCase()}`,
+      // so the handle must already be SKU-safe.
+      expect(product.handle).not.toMatch(/[A-Z]/);
+      expect(product.handle).not.toMatch(/\s/);
+    }
+  });
+
+  it("type SeedProduct is satisfied (compile-time check)", () => {
+    // Just an assertion that the imported type aligns with the imported data.
+    const sample: SeedProduct = PRODUCTS[0];
+    expect(sample).toBeDefined();
   });
 });

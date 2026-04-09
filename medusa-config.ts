@@ -4,13 +4,41 @@ loadEnv(process.env.NODE_ENV || "development", process.cwd());
 
 const isProduction = process.env.NODE_ENV === "production";
 
-const backendUrl =
-  process.env.MEDUSA_BACKEND_URL || "http://localhost:9000";
+// ── Helpers ──────────────────────────────────────────────────────
+
+function requiredInProduction(name: string, devFallback: string): string {
+  const value = process.env[name];
+  if (!value) {
+    if (isProduction) {
+      throw new Error(`${name} is required in production`);
+    }
+    return devFallback;
+  }
+  return value;
+}
+
+// ── Config values ────────────────────────────────────────────────
+
+// DATABASE_URL is intentionally NOT validated at module load time —
+// `medusa build` evaluates this file without a database connection
+// (and would crash if we threw here). At runtime, Medusa surfaces a
+// clearer error if the URL is missing or invalid.
+const databaseUrl = process.env.DATABASE_URL ?? "";
+const databaseLogging = process.env.DATABASE_LOGGING === "true";
+const backendUrl = process.env.MEDUSA_BACKEND_URL || "http://localhost:9000";
 const storeCors = process.env.STORE_CORS || "http://localhost:3000";
 const adminCors = process.env.ADMIN_CORS || "http://localhost:9000";
 const authCors = process.env.AUTH_CORS || `${storeCors},${adminCors}`;
-const redisUrl = process.env.REDIS_URL;
 const useSecureCookies = process.env.COOKIE_SECURE === "true";
+const jwtExpiresIn = process.env.JWT_EXPIRES_IN || "1h";
+
+// Redis: separate logical DBs for cache, event bus and workflow engine.
+// Sharing db=0 means key namespaces collide and one module can interfere
+// with another (especially relevant when noeviction is set on a small box).
+const redisUrl = process.env.REDIS_URL;
+const redisCacheUrl = redisUrl ? `${redisUrl}/0` : undefined;
+const redisEventUrl = redisUrl ? `${redisUrl}/1` : undefined;
+const redisWorkflowUrl = redisUrl ? `${redisUrl}/2` : undefined;
 
 const modules: Record<string, unknown>[] = [];
 
@@ -54,7 +82,28 @@ if (process.env.S3_BUCKET) {
 }
 
 // ── Payment: Stripe ──────────────────────────────────────────────
+// In production with a LIVE Stripe key we REQUIRE the webhook secret —
+// without it, Medusa silently skips signature validation and an
+// attacker can forge "payment_intent.succeeded" events to mark orders
+// as paid. With a TEST key we only warn (test webhooks are still
+// signature-checked but the impact of forgery is limited to test mode).
 if (process.env.STRIPE_API_KEY) {
+  const isLiveKey = process.env.STRIPE_API_KEY.startsWith("sk_live_");
+  if (isProduction && isLiveKey && !process.env.STRIPE_WEBHOOK_SECRET) {
+    throw new Error(
+      "STRIPE_WEBHOOK_SECRET is required in production when STRIPE_API_KEY " +
+        "is a LIVE key. Without it, webhook signature validation is skipped " +
+        "and payment events can be forged.",
+    );
+  }
+  if (isProduction && !isLiveKey && !process.env.STRIPE_WEBHOOK_SECRET) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[medusa-config] STRIPE_API_KEY is set (test mode) but " +
+        "STRIPE_WEBHOOK_SECRET is empty. Webhook signature validation " +
+        "is OFF — set STRIPE_WEBHOOK_SECRET before going to live keys.",
+    );
+  }
   modules.push({
     resolve: "@medusajs/medusa/payment",
     options: {
@@ -79,23 +128,23 @@ if (redisUrl) {
   modules.push(
     {
       resolve: "@medusajs/medusa/event-bus-redis",
-      options: { redisUrl },
+      options: { redisUrl: redisEventUrl },
     },
     {
       resolve: "@medusajs/medusa/cache-redis",
-      options: { redisUrl },
+      options: { redisUrl: redisCacheUrl },
     },
     {
       resolve: "@medusajs/medusa/workflow-engine-redis",
-      options: { redis: { redisUrl } },
+      options: { redis: { url: redisWorkflowUrl } },
     },
   );
 }
 
 export default defineConfig({
   projectConfig: {
-    databaseUrl: process.env.DATABASE_URL!,
-    databaseLogging: false,
+    databaseUrl,
+    databaseLogging,
     databaseDriverOptions: process.env.DATABASE_SSL === "true"
       ? { connection: { ssl: { rejectUnauthorized: false } } }
       : {},
@@ -106,17 +155,9 @@ export default defineConfig({
       storeCors,
       adminCors,
       authCors,
-      jwtSecret: (() => {
-        const secret = process.env.JWT_SECRET;
-        if (!secret && isProduction) throw new Error("JWT_SECRET is required in production");
-        return secret || "supersecret";
-      })(),
-      cookieSecret: (() => {
-        const secret = process.env.COOKIE_SECRET;
-        if (!secret && isProduction) throw new Error("COOKIE_SECRET is required in production");
-        return secret || "supersecret";
-      })(),
-      jwtExpiresIn: "7d",
+      jwtSecret: requiredInProduction("JWT_SECRET", "supersecret"),
+      cookieSecret: requiredInProduction("COOKIE_SECRET", "supersecret"),
+      jwtExpiresIn,
       compression: {
         enabled: true,
         level: 6,
@@ -125,7 +166,7 @@ export default defineConfig({
     },
     cookieOptions: {
       secure: useSecureCookies,
-      sameSite: useSecureCookies ? "none" as const : "lax" as const,
+      sameSite: useSecureCookies ? ("none" as const) : ("lax" as const),
       httpOnly: true,
     },
   },

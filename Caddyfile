@@ -1,37 +1,125 @@
-# ── HTTP-only on server IP (no domain yet, no HTTPS) ──────────────
-# Path-based routing — when a real domain is added, switch to the
-# subdomain blocks (api.veloura.com / admin.veloura.com) and re-enable
-# HSTS in the headers below.
-:80 {
-	encode gzip
+# ── Veloura Caddy config — HTTP only on server IP ─────────────────
+# When a real domain is added, switch the site address from `:80` to
+# `api.veloura.com`/`admin.veloura.com`, re-enable HSTS in the headers
+# block, and remove the path-based admin routing.
 
-	# MinIO media files (S3-compatible). handle_path strips /media before
-	# forwarding, so /media/medusa-media/foo.jpg → minio:9000/medusa-media/foo.jpg
+{
+	# Global options. The admin endpoint stays bound to localhost so the
+	# Caddy admin API is not reachable from the network.
+	admin localhost:2019
+
+	# Upstream client IP recovery: trust the docker bridge so X-Forwarded-For
+	# from the host (when present) is honored, but never trust arbitrary
+	# Internet sources.
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+:80 {
+	# ── Compression ────────────────────────────────────────────────
+	# zstd first (modern, better ratio), then gzip as fallback. Brotli
+	# is not available in the upstream caddy:2-alpine image (would need
+	# a custom build with the brotli plugin).
+	encode zstd gzip
+
+	# ── Request limits ─────────────────────────────────────────────
+	# Cap request bodies at 25 MB. Product image uploads from the admin
+	# UI normally fit in <10 MB; bigger uploads are almost always abuse.
+	request_body {
+		max_size 25MB
+	}
+
+	# ── MinIO media files (S3-compatible) ──────────────────────────
+	# handle_path strips /media before forwarding, so:
+	#   /media/medusa-media/foo.jpg → minio:9000/medusa-media/foo.jpg
+	# Headers below override the global block for /media (no SAMEORIGIN
+	# so images can be embedded in third-party stores/CDNs in the future).
 	handle_path /media/* {
 		reverse_proxy minio:9000 {
 			header_up Host {upstream_hostport}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+
+			# Reasonable transport timeouts so a slow MinIO doesn't hang Caddy.
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 30s
+			}
+		}
+
+		header {
+			X-Content-Type-Options nosniff
+			Cache-Control "public, max-age=31536000, immutable"
+			-Server
 		}
 	}
 
-	# Everything else → Medusa (API at /, admin at /veloura)
-	handle {
-		reverse_proxy medusa:9000
+	# ── Admin panel rate limit (best-effort with Caddy core) ───────
+	# Caddy core does not ship a rate limit module. We instead apply a
+	# 1MB body limit and rely on app-level rate limiting (TODO: add a
+	# `mholt/caddy-ratelimit` build for /auth/* and /veloura/auth/*).
+	# For now we add a smaller body limit on auth endpoints to make
+	# password-stuffing more expensive.
+	@auth path /auth/* /veloura/auth/*
+	handle @auth {
+		request_body {
+			max_size 16KB
+		}
+		reverse_proxy medusa:9000 {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 30s
+			}
+		}
 	}
 
+	# ── Everything else → Medusa (API at /, admin at /veloura) ─────
+	handle {
+		reverse_proxy medusa:9000 {
+			header_up Host {host}
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 60s
+				read_timeout 120s
+			}
+		}
+	}
+
+	# ── Global response headers ────────────────────────────────────
+	# Security headers applied to ALL responses (overridden inside
+	# handle_path /media/* above for image-friendly caching).
 	header {
-		# Security headers (HSTS omitted because we serve plain HTTP)
 		X-Content-Type-Options nosniff
 		X-Frame-Options SAMEORIGIN
 		Referrer-Policy strict-origin-when-cross-origin
 		Permissions-Policy "microphone=(), camera=(), geolocation=(), payment=()"
 		X-Permitted-Cross-Domain-Policies none
+		# Conservative CSP — Medusa admin uses inline scripts/styles, so
+		# we allow them. Tighten when the admin UI moves to nonces.
+		Content-Security-Policy "default-src 'self'; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com"
 		-Server
+		-X-Powered-By
 	}
 
+	# ── Logs ───────────────────────────────────────────────────────
+	# Rotate by size AND time so neither high-traffic days nor quiet
+	# months leave logs in a weird state.
 	log {
 		output file /data/access.log {
 			roll_size 10mb
-			roll_keep 5
+			roll_keep 10
+			roll_keep_for 720h
 		}
+		format json
+		level INFO
 	}
 }

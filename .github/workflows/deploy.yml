@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:  # allow manual trigger from GitHub UI
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy to server
@@ -16,25 +20,39 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          command_timeout: 15m
+          command_timeout: 20m
           script_stop: true
+          envs: MEDUSA_BACKEND_URL_OVERRIDE
           script: |
             set -euo pipefail
             cd /home/deploy/apps/veloura
+
+            # The admin UI bundle bakes MEDUSA_BACKEND_URL at build time.
+            # Allow the workflow to override via env (for staging/preview),
+            # otherwise read from .env.prod on the server.
+            if [ -n "${MEDUSA_BACKEND_URL_OVERRIDE:-}" ]; then
+              export MEDUSA_BACKEND_URL="${MEDUSA_BACKEND_URL_OVERRIDE}"
+            else
+              # Source from .env.prod (single line, robust to whitespace)
+              MEDUSA_BACKEND_URL=$(grep -E '^MEDUSA_BACKEND_URL=' .env.prod | cut -d= -f2-)
+              export MEDUSA_BACKEND_URL
+            fi
+            echo ">>> MEDUSA_BACKEND_URL=$MEDUSA_BACKEND_URL"
+
+            # Save the previous image hash so we can roll back if the
+            # new build fails its healthcheck.
+            PREV_IMAGE=$(docker inspect veloura-medusa --format='{{.Image}}' 2>/dev/null || echo "")
+            echo ">>> Previous medusa image: $PREV_IMAGE"
 
             echo ">>> Pulling latest from main"
             git fetch origin main
             git reset --hard origin/main
 
-            echo ">>> Pre-deploy backup"
-            mkdir -p logs
-            ./scripts/backup-db.sh
+            echo ">>> Pre-deploy backup (DB)"
+            mkdir -p logs backups
+            ./scripts/backup-db.sh docker
 
             echo ">>> Pre-build node_modules + medusa build on host"
-            # MEDUSA_BACKEND_URL must be set so the admin UI bundle bakes the
-            # right backend URL (vite replaces __BACKEND_URL__ at build time).
-            # If we change the public URL, this value must be updated.
-            export MEDUSA_BACKEND_URL=http://161.132.40.176
             rm -rf node_modules
             npm ci --no-audit --no-fund
             npm run build
@@ -42,7 +60,12 @@ jobs:
             npm ci --omit=dev --no-audit --no-fund
 
             echo ">>> Docker rebuild & restart medusa stack"
-            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build medusa medusa-worker
+            docker compose -f docker-compose.prod.yml --env-file .env.prod \
+              up -d --build --force-recreate --remove-orphans medusa medusa-worker
+
+            echo ">>> Reload Caddy (Caddyfile is bind-mounted from host)"
+            docker compose -f docker-compose.prod.yml --env-file .env.prod \
+              restart caddy
 
             echo ">>> Wait for medusa to be healthy"
             status="missing"
@@ -56,15 +79,29 @@ jobs:
               sleep 3
             done
             if [ "$status" != "healthy" ]; then
-              echo "FAIL: medusa never became healthy"
-              docker logs veloura-medusa --tail 50
+              echo "FAIL: medusa never became healthy. Recent logs:"
+              docker logs veloura-medusa --tail 80 || true
+              if [ -n "$PREV_IMAGE" ]; then
+                echo ">>> Rolling back to previous image: $PREV_IMAGE"
+                docker tag "$PREV_IMAGE" veloura-medusa:latest
+                docker compose -f docker-compose.prod.yml --env-file .env.prod \
+                  up -d --force-recreate medusa medusa-worker
+              fi
               exit 1
             fi
+
+            echo ">>> Run pending DB migrations"
+            docker compose -f docker-compose.prod.yml --env-file .env.prod \
+              run --rm --no-deps medusa npx medusa db:migrate
 
             echo ">>> Smoke test: /health endpoint"
             curl -fsS http://127.0.0.1/health || (echo "Health endpoint failed"; exit 1)
 
-            echo ">>> Cleanup old images"
+            echo ">>> Smoke test: /veloura admin UI returns 200"
+            curl -fsS -o /dev/null http://127.0.0.1/veloura
+
+            echo ">>> Cleanup old images and buildx cache"
             docker image prune -f
+            docker buildx prune -f --keep-storage 1GB || true
 
             echo ">>> Deploy complete"

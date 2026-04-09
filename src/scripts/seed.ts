@@ -16,8 +16,11 @@ import {
 } from "@medusajs/medusa/core-flows";
 
 // ── Veloura Product Data ─────────────────────────────────────────
+//
+// Image URLs use picsum.photos with explicit dimensions because picsum
+// returns 404 if you don't specify a size in the URL path.
 
-const CATEGORIES = [
+export const CATEGORIES = [
   {
     name: "Balconette",
     description: "Structured cups with delicate presence. Refined aesthetics and all-day comfort.",
@@ -55,7 +58,7 @@ const CATEGORIES = [
   },
 ];
 
-interface SeedProduct {
+export interface SeedProduct {
   title: string;
   handle: string;
   tagline: string;
@@ -70,7 +73,10 @@ interface SeedProduct {
   featured: boolean;
 }
 
-const PRODUCTS: SeedProduct[] = [
+// All picsum URLs include `/600/600` because picsum.photos returns 404
+// without explicit dimensions. Descriptions are intentionally longer than
+// the tagline (SEO + storefront copy).
+export const PRODUCTS: SeedProduct[] = [
   {
     title: "Noir Essence Balconette",
     handle: "noir-essence-balconette",
@@ -79,16 +85,17 @@ const PRODUCTS: SeedProduct[] = [
     priceCents: 11200,
     sizes: ["XS", "S", "M", "L"],
     tags: ["signature", "mesh", "evening"],
-    description: "Architectural lift in satin and mesh.",
+    description:
+      "A signature balconette engineered for evening wear. The matte satin cups deliver architectural lift while a power mesh back panel keeps the silhouette steady through long hours. Cut for a cleaner line under tailored shirting and slip dresses.",
     details: [
       "Underwire support with soft cup reinforcement",
       "Adjustable straps and brushed hardware in soft gold",
       "Lightweight power mesh back for shape retention",
     ],
     images: [
-      "https://picsum.photos/seed/noir-essence-balconette-1",
-      "https://picsum.photos/seed/noir-essence-balconette-2",
-      "https://picsum.photos/seed/noir-essence-balconette-3",
+      "https://picsum.photos/seed/noir-essence-balconette-1/600/600",
+      "https://picsum.photos/seed/noir-essence-balconette-2/600/600",
+      "https://picsum.photos/seed/noir-essence-balconette-3/600/600",
     ],
     palette: ["#1b1a1e", "#7e6843"],
     featured: true,
@@ -101,16 +108,17 @@ const PRODUCTS: SeedProduct[] = [
     priceCents: 11800,
     sizes: ["S", "M", "L", "XL"],
     tags: ["best-seller", "velvet-trim", "daily-luxury"],
-    description: "A clean demi profile with velvet-soft trim.",
+    description:
+      "Veloura's bestselling demi cut, now with a velvet binding along the neckline that softens the edge against skin. Wide side wings smooth the silhouette and the engineered satin keeps its shape from morning to evening. Designed to layer cleanly under plunging knits.",
     details: [
       "Matte stretch satin with velvet binding",
       "Wide side wings for a smoother frame",
       "Engineered to layer under plunging silhouettes",
     ],
     images: [
-      "https://picsum.photos/seed/velvet-trace-balconette-1",
-      "https://picsum.photos/seed/velvet-trace-balconette-2",
-      "https://picsum.photos/seed/velvet-trace-balconette-3",
+      "https://picsum.photos/seed/velvet-trace-balconette-1/600/600",
+      "https://picsum.photos/seed/velvet-trace-balconette-2/600/600",
+      "https://picsum.photos/seed/velvet-trace-balconette-3/600/600",
     ],
     palette: ["#2b2025", "#9b7d51"],
     featured: true,
@@ -123,16 +131,17 @@ const PRODUCTS: SeedProduct[] = [
     priceCents: 12400,
     sizes: ["XS", "S", "M", "L"],
     tags: ["bridal", "ivory", "ceremony"],
-    description: "Soft ivory for understated ceremony dressing.",
+    description:
+      "An understated bridal balconette in soft ivory, designed for the modern ceremony. Low-profile cups sit cleanly under the most delicate satin gowns and the breathable sheer side panels keep you comfortable through the longest reception. Discreet finish lines make this nearly invisible under your dress.",
     details: [
       "Low-profile cups that sit cleanly under satin gowns",
       "Breathable sheer side panels for comfort",
       "Discreet finish lines for a nearly invisible fit",
     ],
     images: [
-      "https://picsum.photos/seed/lune-ivory-balconette-1",
-      "https://picsum.photos/seed/lune-ivory-balconette-2",
-      "https://picsum.photos/seed/lune-ivory-balconette-3",
+      "https://picsum.photos/seed/lune-ivory-balconette-1/600/600",
+      "https://picsum.photos/seed/lune-ivory-balconette-2/600/600",
+      "https://picsum.photos/seed/lune-ivory-balconette-3/600/600",
     ],
     palette: ["#f5ede2", "#c0a26b"],
     featured: true,
@@ -145,16 +154,17 @@ const PRODUCTS: SeedProduct[] = [
     priceCents: 16800,
     sizes: ["XS", "S", "M", "L"],
     tags: ["bridal", "bodysuit", "shimmer"],
-    description: "Fluid shimmer and sculpted vertical seams.",
+    description:
+      "A fluid champagne bodysuit with vertical seams that sculpt the waist while keeping movement effortless. Snap closure with a smooth gusset finish and moderate compression through the midsection. Equally at home as bridal underpinning or styled as an outer layer with high-waisted tailoring.",
     details: [
       "Snap closure with smooth gusset finish",
       "Moderate compression through the waist",
       "Works as an underpinning or styled outer layer",
     ],
     images: [
-      "https://picsum.photos/seed/champagne-glow-bodysuit-1",
-      "https://picsum.photos/seed/champagne-glow-bodysuit-2",
-      "https://picsum.photos/seed/champagne-glow-bodysuit-3",
+      "https://picsum.photos/seed/champagne-glow-bodysuit-1/600/600",
+      "https://picsum.photos/seed/champagne-glow-bodysuit-2/600/600",
+      "https://picsum.photos/seed/champagne-glow-bodysuit-3/600/600",
     ],
     palette: ["#dfd3c1", "#a98554"],
     featured: true,
@@ -167,16 +177,17 @@ const PRODUCTS: SeedProduct[] = [
     priceCents: 17200,
     sizes: ["XS", "S", "M", "L", "XL"],
     tags: ["editorial", "sheer", "night-out"],
-    description: "Graphic transparency with a tailored base.",
+    description:
+      "A graphic bodysuit that pairs sheer paneling with a dual-layer support front. Invisible elastic edges keep the line minimal — no bumps under fitted blazers, knit twinsets, or open shirting. The cut sits flat against the décolletage and the tailored base eliminates riding up.",
     details: [
       "Dual-layer front for support without bulk",
       "Invisible elastic edges keep the line minimal",
       "Ideal under blazers, shirting and open knits",
     ],
     images: [
-      "https://picsum.photos/seed/obsidian-line-bodysuit-1",
-      "https://picsum.photos/seed/obsidian-line-bodysuit-2",
-      "https://picsum.photos/seed/obsidian-line-bodysuit-3",
+      "https://picsum.photos/seed/obsidian-line-bodysuit-1/600/600",
+      "https://picsum.photos/seed/obsidian-line-bodysuit-2/600/600",
+      "https://picsum.photos/seed/obsidian-line-bodysuit-3/600/600",
     ],
     palette: ["#111214", "#8c7042"],
     featured: false,
@@ -189,16 +200,17 @@ const PRODUCTS: SeedProduct[] = [
     priceCents: 19600,
     sizes: ["XS", "S", "M", "L", "XL"],
     tags: ["bridal", "giftable", "set"],
-    description: "A bridal-ready pairing for slow mornings.",
+    description:
+      "A bridal slip and matching brief in a silk-touch finish, designed for slow getting-ready mornings and trousseau gifting. The bias-inspired cut skims rather than clings, and the pieces arrive in a soft storage pouch ready to gift. A quiet luxury staple for the days that matter.",
     details: [
       "Includes matching brief in the same silk-touch finish",
       "Bias-inspired shape that skims instead of clings",
       "Packed with a soft storage pouch for gifting",
     ],
     images: [
-      "https://picsum.photos/seed/silk-vow-slip-set-1",
-      "https://picsum.photos/seed/silk-vow-slip-set-2",
-      "https://picsum.photos/seed/silk-vow-slip-set-3",
+      "https://picsum.photos/seed/silk-vow-slip-set-1/600/600",
+      "https://picsum.photos/seed/silk-vow-slip-set-2/600/600",
+      "https://picsum.photos/seed/silk-vow-slip-set-3/600/600",
     ],
     palette: ["#f2e8d8", "#b99260"],
     featured: false,
@@ -211,16 +223,17 @@ const PRODUCTS: SeedProduct[] = [
     priceCents: 15400,
     sizes: ["S", "M", "L", "XL"],
     tags: ["robe", "lounge", "soft-sheen"],
-    description: "Longline lounge with tonal sheen.",
+    description:
+      "A longline lounge robe with a cool-touch finish and a discreet tonal sheen. The detachable belt has an interior tie for secure wear, and the wide sleeves drape easily over loungewear sets. Layers naturally over the Cashmere Hush bralette and Moon Satin tap shorts.",
     details: [
       "Detachable belt with interior tie for secure wear",
       "Wide sleeves cut for easy layering",
       "Soft drape with a cool-touch finish",
     ],
     images: [
-      "https://picsum.photos/seed/midnight-whisper-robe-1",
-      "https://picsum.photos/seed/midnight-whisper-robe-2",
-      "https://picsum.photos/seed/midnight-whisper-robe-3",
+      "https://picsum.photos/seed/midnight-whisper-robe-1/600/600",
+      "https://picsum.photos/seed/midnight-whisper-robe-2/600/600",
+      "https://picsum.photos/seed/midnight-whisper-robe-3/600/600",
     ],
     palette: ["#1d2028", "#867150"],
     featured: true,
@@ -233,16 +246,17 @@ const PRODUCTS: SeedProduct[] = [
     priceCents: 8600,
     sizes: ["XS", "S", "M", "L"],
     tags: ["bralette", "soft-touch", "travel"],
-    description: "Relaxed support for quiet indulgence.",
+    description:
+      "Wire-free comfort with the luxe hand-feel of a cashmere blend. Removable cup pads, a wide underband, and seamless sides make this the bralette you forget you're wearing. Pairs with the Moon Satin tap short and the Midnight Whisper robe for a complete loungewear edit.",
     details: [
       "Wire-free construction with removable pads",
       "Wide underband for comfort through long wear",
       "Pairs with lounge shorts or robe layers",
     ],
     images: [
-      "https://picsum.photos/seed/cashmere-hush-bralette-1",
-      "https://picsum.photos/seed/cashmere-hush-bralette-2",
-      "https://picsum.photos/seed/cashmere-hush-bralette-3",
+      "https://picsum.photos/seed/cashmere-hush-bralette-1/600/600",
+      "https://picsum.photos/seed/cashmere-hush-bralette-2/600/600",
+      "https://picsum.photos/seed/cashmere-hush-bralette-3/600/600",
     ],
     palette: ["#8f8076", "#c0a06d"],
     featured: false,
@@ -255,16 +269,17 @@ const PRODUCTS: SeedProduct[] = [
     priceCents: 6400,
     sizes: ["XS", "S", "M", "L", "XL"],
     tags: ["short", "set-ready", "satin"],
-    description: "Lightweight lounge built for layering.",
+    description:
+      "Bias-cut inspired tap shorts in a lightweight satin that drapes instead of clings. The hidden elastic waistband sits flat under longer hems and the relaxed leg opening moves with you. Layers naturally with the rest of Veloura's lounge edit for a complete set.",
     details: [
       "Bias-cut inspired leg opening for movement",
       "Smooth waistband with hidden elastic",
       "Pairs naturally with lounge bras and robes",
     ],
     images: [
-      "https://picsum.photos/seed/moon-satin-tap-short-1",
-      "https://picsum.photos/seed/moon-satin-tap-short-2",
-      "https://picsum.photos/seed/moon-satin-tap-short-3",
+      "https://picsum.photos/seed/moon-satin-tap-short-1/600/600",
+      "https://picsum.photos/seed/moon-satin-tap-short-2/600/600",
+      "https://picsum.photos/seed/moon-satin-tap-short-3/600/600",
     ],
     palette: ["#d7c7bb", "#9f7c4b"],
     featured: false,
@@ -277,16 +292,17 @@ const PRODUCTS: SeedProduct[] = [
     priceCents: 14800,
     sizes: ["XS", "S", "M", "L"],
     tags: ["bridal", "teddy", "giftable"],
-    description: "A sheer bridal one-piece with luminous trim.",
+    description:
+      "A sheer one-piece teddy with a modestly lined bust and luminous gilded trim along the neckline. The soft leg curve avoids harsh elastic marks and the fabric sits smoothly under bridal slips and robes. A giftable piece that doubles as honeymoon staple.",
     details: [
       "Sheer body with modestly lined bust",
       "Soft leg curve with no harsh elastic marks",
       "Designed to sit smoothly under robes and slips",
     ],
     images: [
-      "https://picsum.photos/seed/gilded-veil-teddy-1",
-      "https://picsum.photos/seed/gilded-veil-teddy-2",
-      "https://picsum.photos/seed/gilded-veil-teddy-3",
+      "https://picsum.photos/seed/gilded-veil-teddy-1/600/600",
+      "https://picsum.photos/seed/gilded-veil-teddy-2/600/600",
+      "https://picsum.photos/seed/gilded-veil-teddy-3/600/600",
     ],
     palette: ["#f7f0e4", "#b08b57"],
     featured: false,
@@ -299,16 +315,17 @@ const PRODUCTS: SeedProduct[] = [
     priceCents: 18200,
     sizes: ["XS", "S", "M", "L"],
     tags: ["corset", "structured", "occasion"],
-    description: "Modern contouring with softened structure.",
+    description:
+      "A modern corset with flexible boning that contours without stiffness. The front neckline is cut to layer cleanly under tailored jackets, while the back paneling balances compression with breathability. An occasion piece engineered for full evenings, not just photos.",
     details: [
       "Flexible boning for shape without stiffness",
       "Front neckline cut to layer under jackets",
       "Back paneling balances compression and comfort",
     ],
     images: [
-      "https://picsum.photos/seed/atelier-shadow-corset-1",
-      "https://picsum.photos/seed/atelier-shadow-corset-2",
-      "https://picsum.photos/seed/atelier-shadow-corset-3",
+      "https://picsum.photos/seed/atelier-shadow-corset-1/600/600",
+      "https://picsum.photos/seed/atelier-shadow-corset-2/600/600",
+      "https://picsum.photos/seed/atelier-shadow-corset-3/600/600",
     ],
     palette: ["#16161a", "#6d5937"],
     featured: true,
@@ -321,21 +338,35 @@ const PRODUCTS: SeedProduct[] = [
     priceCents: 9800,
     sizes: ["XS", "S", "M", "L", "XL"],
     tags: ["set", "minimal", "bronze"],
-    description: "Minimal coverage in a warm bronze wash.",
+    description:
+      "A minimal triangle set in a warm bronze wash. The matching brief is included in the set price and the refined elastic finish keeps the silhouette clean against skin. Light support suits all-day wear under summer dressing.",
     details: [
       "Triangle cup with refined elastic finish",
       "Matching brief included in the set price",
       "Light support suited to all-day wear",
     ],
     images: [
-      "https://picsum.photos/seed/soft-flame-triangle-set-1",
-      "https://picsum.photos/seed/soft-flame-triangle-set-2",
-      "https://picsum.photos/seed/soft-flame-triangle-set-3",
+      "https://picsum.photos/seed/soft-flame-triangle-set-1/600/600",
+      "https://picsum.photos/seed/soft-flame-triangle-set-2/600/600",
+      "https://picsum.photos/seed/soft-flame-triangle-set-3/600/600",
     ],
     palette: ["#5f4a3d", "#b48a56"],
     featured: false,
   },
 ];
+
+// FX rates used to seed EUR/GBP prices. Hardcoded by design for the seed
+// (not for production pricing). For real currency conversion, integrate a
+// rate feed and run a price-update job. Update these annually.
+const FX_RATES = {
+  eur_per_usd: 0.92,
+  gbp_per_usd: 0.79,
+} as const;
+
+// All countries that should accept shipping. Used to build the service
+// zone so that customers in EU/UK can actually check out (the previous
+// version only included `us` despite having three regions).
+const SHIPPING_COUNTRIES = ["us", "ca", "mx", "es", "fr", "de", "it", "pt", "gb"] as const;
 
 // ── Seed Function ────────────────────────────────────────────────
 
@@ -348,7 +379,13 @@ export default async function seedVelouraData({ container }: ExecArgs) {
 
   // ── 1. Update store settings ────────────────────────────────────
   const storeModule = container.resolve(Modules.STORE);
-  const [store] = await storeModule.listStores();
+  const stores = await storeModule.listStores();
+  if (stores.length === 0) {
+    throw new Error(
+      "No store found. Run `medusa db:migrate` first — Medusa creates the default store automatically.",
+    );
+  }
+  const store = stores[0];
 
   await updateStoresWorkflow(container).run({
     input: {
@@ -366,38 +403,81 @@ export default async function seedVelouraData({ container }: ExecArgs) {
   });
   logger.info("  ✓ Store configured (USD, EUR, GBP, MXN)");
 
-  // ── 2. Create sales channel ─────────────────────────────────────
-  const { result: salesChannels } = await createSalesChannelsWorkflow(container).run({
-    input: {
-      salesChannelsData: [
-        {
-          name: "Veloura Storefront",
-          description: "Main luxury lingerie online storefront",
-        },
-      ],
-    },
-  });
-  const salesChannel = salesChannels[0];
-  logger.info("  ✓ Sales channel created");
+  // ── 2. Use existing default sales channel (created by migrations) ──
+  // Avoids creating a duplicate "Veloura Storefront" alongside the
+  // "Default Sales Channel" that medusa creates automatically.
+  const salesChannelModule = container.resolve(Modules.SALES_CHANNEL);
+  const existingChannels = await salesChannelModule.listSalesChannels({});
+  let salesChannel = existingChannels.find((c) => c.name === "Veloura Storefront");
+  if (!salesChannel) {
+    const { result: created } = await createSalesChannelsWorkflow(container).run({
+      input: {
+        salesChannelsData: [
+          {
+            name: "Veloura Storefront",
+            description: "Main luxury lingerie online storefront",
+          },
+        ],
+      },
+    });
+    salesChannel = created[0];
+    logger.info("  ✓ Sales channel created");
+  } else {
+    logger.info("  ✓ Sales channel reused (already existed)");
+  }
 
   // ── 3. Create publishable API key & link to sales channel ───────
+  // The api key token is intentionally NOT logged in plaintext — it
+  // ends up in container logs that get shipped to journald. Print only
+  // the title and id; consumers can fetch the token from the admin UI.
   const apiKeyModule = container.resolve(Modules.API_KEY);
-  const apiKey = await apiKeyModule.createApiKeys({
+  const existingKeys = await apiKeyModule.listApiKeys({
     title: "Veloura Storefront Key",
-    type: "publishable",
-    created_by: "seed-script",
   });
-
-  await linkSalesChannelsToApiKeyWorkflow(container).run({
-    input: {
-      id: apiKey.id,
-      add: [salesChannel.id],
-    },
-  });
-  logger.info(`  ✓ API key created: ${apiKey.token}`);
+  let apiKey = existingKeys[0];
+  if (!apiKey) {
+    apiKey = await apiKeyModule.createApiKeys({
+      title: "Veloura Storefront Key",
+      type: "publishable",
+      created_by: "seed-script",
+    });
+    await linkSalesChannelsToApiKeyWorkflow(container).run({
+      input: {
+        id: apiKey.id,
+        add: [salesChannel.id],
+      },
+    });
+    logger.info(
+      `  ✓ API key created (id=${apiKey.id}, title="Veloura Storefront Key") — fetch token from admin UI`,
+    );
+  } else {
+    logger.info(`  ✓ API key reused (id=${apiKey.id})`);
+  }
 
   // ── 4. Create regions ───────────────────────────────────────────
-  const paymentProviders = process.env.STRIPE_API_KEY ? ["pp_stripe_stripe"] : [];
+  // Stripe payment provider is referenced ONLY when STRIPE_API_KEY is
+  // set. The provider id `pp_stripe_stripe` is registered by the Stripe
+  // module at startup; if the seed runs before the module finishes
+  // initializing, this would fail. We resolve the payment module first
+  // and verify the provider exists before passing it to regions.
+  let stripeProviderIds: string[] = [];
+  if (process.env.STRIPE_API_KEY) {
+    try {
+      const paymentModule = container.resolve(Modules.PAYMENT);
+      const providers = await paymentModule.listPaymentProviders();
+      const stripeProvider = providers.find((p) => p.id === "pp_stripe_stripe");
+      if (stripeProvider) {
+        stripeProviderIds = ["pp_stripe_stripe"];
+      } else {
+        logger.warn(
+          "  ! STRIPE_API_KEY is set but pp_stripe_stripe is not registered yet — skipping payment provider on regions. Re-run seed after Medusa fully boots, or assign manually in admin.",
+        );
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn(`  ! Could not resolve payment module: ${message}`);
+    }
+  }
 
   const { result: regions } = await createRegionsWorkflow(container).run({
     input: {
@@ -406,19 +486,19 @@ export default async function seedVelouraData({ container }: ExecArgs) {
           name: "North America",
           currency_code: "usd",
           countries: ["us", "ca", "mx"],
-          payment_providers: paymentProviders,
+          payment_providers: stripeProviderIds,
         },
         {
           name: "Europe",
           currency_code: "eur",
           countries: ["es", "fr", "de", "it", "pt"],
-          payment_providers: paymentProviders,
+          payment_providers: stripeProviderIds,
         },
         {
           name: "United Kingdom",
           currency_code: "gbp",
           countries: ["gb"],
-          payment_providers: paymentProviders,
+          payment_providers: stripeProviderIds,
         },
       ],
     },
@@ -426,13 +506,14 @@ export default async function seedVelouraData({ container }: ExecArgs) {
   logger.info("  ✓ Regions created (NA, Europe, UK)");
 
   // ── 5. Create tax regions ───────────────────────────────────────
-  await createTaxRegionsWorkflow(container).run({
-    input: regions.flatMap((region) =>
-      region.countries!.map((c) => ({
-        country_code: c.iso_2,
-      })),
-    ),
-  });
+  // Defensive: filter out regions without countries (shouldn't happen
+  // in practice, but the workflow result type allows undefined).
+  const taxRegionInputs = regions.flatMap((region) =>
+    (region.countries ?? []).map((c) => ({ country_code: c.iso_2 })),
+  );
+  if (taxRegionInputs.length > 0) {
+    await createTaxRegionsWorkflow(container).run({ input: taxRegionInputs });
+  }
   logger.info("  ✓ Tax regions created");
 
   // ── 6. Create stock location ────────────────────────────────────
@@ -463,14 +544,19 @@ export default async function seedVelouraData({ container }: ExecArgs) {
   logger.info("  ✓ Stock location created (Miami)");
 
   // ── 7. Create fulfillment set & shipping options ────────────────
+  // Service zone now spans ALL countries we ship to (not just US),
+  // so customers in EU/UK can complete checkout for their region.
   const fulfillmentModule = container.resolve(Modules.FULFILLMENT);
   const fulfillmentSet = await fulfillmentModule.createFulfillmentSets({
     name: "Veloura Shipping",
     type: "shipping",
     service_zones: [
       {
-        name: "Worldwide",
-        geo_zones: [{ type: "country", country_code: "us" }],
+        name: "Global",
+        geo_zones: SHIPPING_COUNTRIES.map((country_code) => ({
+          type: "country" as const,
+          country_code,
+        })),
       },
     ],
   });
@@ -497,6 +583,11 @@ export default async function seedVelouraData({ container }: ExecArgs) {
   ]);
 
   const serviceZone = fulfillmentSet.service_zones[0];
+
+  // The "Complimentary Shipping" option is now actually gated by a
+  // cart-total minimum so the label "Orders over $200" matches the
+  // behavior. Standard and Express are unconditional.
+  const FREE_SHIPPING_MIN_USD = 20000; // $200.00 in cents
 
   await createShippingOptionsWorkflow(container).run({
     input: [
@@ -534,13 +625,24 @@ export default async function seedVelouraData({ container }: ExecArgs) {
         service_zone_id: serviceZone.id,
         shipping_profile_id: shippingProfiles[0].id,
         provider_id: "manual_manual",
-        type: { label: "Complimentary", description: "Orders over $200", code: "free" },
+        type: {
+          label: "Complimentary",
+          description: `Free on orders over $${FREE_SHIPPING_MIN_USD / 100}`,
+          code: "free",
+        },
         prices: [
           { currency_code: "usd", amount: 0 },
           { currency_code: "eur", amount: 0 },
           { currency_code: "gbp", amount: 0 },
         ],
-        rules: [{ attribute: "enabled_in_store", value: "true", operator: "eq" }],
+        rules: [
+          { attribute: "enabled_in_store", value: "true", operator: "eq" },
+          {
+            attribute: "item_total",
+            value: String(FREE_SHIPPING_MIN_USD),
+            operator: "gte",
+          },
+        ],
       },
     ],
   });
@@ -593,11 +695,11 @@ export default async function seedVelouraData({ container }: ExecArgs) {
             { currency_code: "usd", amount: p.priceCents },
             {
               currency_code: "eur",
-              amount: Math.round(p.priceCents * 0.92),
+              amount: Math.round(p.priceCents * FX_RATES.eur_per_usd),
             },
             {
               currency_code: "gbp",
-              amount: Math.round(p.priceCents * 0.79),
+              amount: Math.round(p.priceCents * FX_RATES.gbp_per_usd),
             },
           ],
         })),
@@ -614,9 +716,20 @@ export default async function seedVelouraData({ container }: ExecArgs) {
   logger.info(`  ✓ ${products.length} products created`);
 
   // ── 11. Set inventory levels ────────────────────────────────────
+  // Scope to inventory items belonging to the products we just created
+  // (via the SKU pattern) instead of querying ALL inventory items in
+  // the DB. This prevents touching pre-existing or stale inventory items
+  // from previous seed runs.
+  const newProductSkus = PRODUCTS.flatMap((p) =>
+    p.sizes.map((size) => `${p.handle}-${size.toLowerCase()}`),
+  );
+
   const { data: inventoryItems } = await query.graph({
     entity: "inventory_item",
-    fields: ["id"],
+    fields: ["id", "sku"],
+    filters: {
+      sku: newProductSkus,
+    },
   });
 
   if (inventoryItems.length > 0) {
@@ -629,7 +742,9 @@ export default async function seedVelouraData({ container }: ExecArgs) {
         })),
       },
     });
-    logger.info(`  ✓ Inventory set (50 units per variant)`);
+    logger.info(`  ✓ Inventory set (50 units per variant, ${inventoryItems.length} items)`);
+  } else {
+    logger.warn("  ! No inventory items found for new product SKUs — skipping inventory setup");
   }
 
   // ── Done ────────────────────────────────────────────────────────
@@ -637,6 +752,7 @@ export default async function seedVelouraData({ container }: ExecArgs) {
   logger.info("═══════════════════════════════════════════");
   logger.info("  Veloura seed complete!");
   logger.info(`  ${products.length} products across ${categories.length} categories`);
-  logger.info(`  Publishable API key: ${apiKey.token}`);
+  logger.info(`  Publishable API key id: ${apiKey.id}`);
+  logger.info(`  Fetch the token from the admin UI at /veloura → Settings → API Keys`);
   logger.info("═══════════════════════════════════════════");
 }

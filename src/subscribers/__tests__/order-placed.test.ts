@@ -4,17 +4,24 @@ vi.mock("@medusajs/framework/utils", () => ({
   ContainerRegistrationKeys: {
     LOGGER: "logger",
   },
+  Modules: {
+    ORDER: "order",
+  },
 }));
 
-import orderPlacedHandler, { config } from "../../subscribers/order-placed";
+import orderPlacedHandler, { config } from "../../subscribers/order-placed.js";
 
 interface MockLogger {
   info: ReturnType<typeof vi.fn>;
   error: ReturnType<typeof vi.fn>;
 }
 
+interface MockOrderModule {
+  retrieveOrder: ReturnType<typeof vi.fn>;
+}
+
 interface MockContainer {
-  resolve: (key: string) => MockLogger | undefined;
+  resolve: (key: string) => MockLogger | MockOrderModule | undefined;
 }
 
 interface MockEvent {
@@ -27,6 +34,19 @@ interface MockSubscriberArgs {
   container: MockContainer;
 }
 
+function buildContainer(opts: {
+  logger: MockLogger;
+  orderModule?: MockOrderModule | null;
+}): MockContainer {
+  return {
+    resolve: (key: string) => {
+      if (key === "logger") return opts.logger;
+      if (key === "order") return opts.orderModule ?? undefined;
+      return undefined;
+    },
+  };
+}
+
 describe("order-placed subscriber", () => {
   describe("config", () => {
     it("listens to the 'order.placed' event", () => {
@@ -35,72 +55,78 @@ describe("order-placed subscriber", () => {
   });
 
   describe("handler", () => {
-    it("logs the order ID when called", async () => {
-      const infoFn = vi.fn();
-      const errorFn = vi.fn();
+    it("hydrates the order and logs id+email+total when retrieveOrder succeeds", async () => {
+      const logger: MockLogger = { info: vi.fn(), error: vi.fn() };
+      const orderModule: MockOrderModule = {
+        retrieveOrder: vi.fn().mockResolvedValue({
+          id: "order_test_123",
+          email: "buyer@example.com",
+          total: 12345,
+          currency_code: "usd",
+        }),
+      };
       const args: MockSubscriberArgs = {
         event: { data: { id: "order_test_123" }, name: "order.placed" },
-        container: {
-          resolve: (key: string) =>
-            key === "logger" ? { info: infoFn, error: errorFn } : undefined,
-        },
+        container: buildContainer({ logger, orderModule }),
       };
 
       await orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0]);
 
-      expect(infoFn).toHaveBeenCalledOnce();
-      expect(infoFn).toHaveBeenCalledWith(expect.stringContaining("order_test_123"));
-      expect(errorFn).not.toHaveBeenCalled();
+      expect(orderModule.retrieveOrder).toHaveBeenCalledOnce();
+      expect(logger.info).toHaveBeenCalledOnce();
+      const message = logger.info.mock.calls[0][0] as string;
+      expect(message).toContain("order_test_123");
+      expect(message).toContain("buyer@example.com");
+      expect(message).toContain("12345");
+      expect(logger.error).not.toHaveBeenCalled();
     });
 
-    it("logs with ISO timestamp in the message", async () => {
-      const infoFn = vi.fn();
+    it("falls back to a minimal log line when retrieveOrder fails", async () => {
+      const logger: MockLogger = { info: vi.fn(), error: vi.fn() };
+      const orderModule: MockOrderModule = {
+        retrieveOrder: vi.fn().mockRejectedValue(new Error("not found")),
+      };
       const args: MockSubscriberArgs = {
         event: { data: { id: "order_456" }, name: "order.placed" },
-        container: { resolve: () => ({ info: infoFn, error: vi.fn() }) },
+        container: buildContainer({ logger, orderModule }),
       };
 
       await orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0]);
 
-      const logMessage = infoFn.mock.calls[0][0] as string;
-      expect(logMessage).toContain("order_456");
-      expect(logMessage).toMatch(/\d{4}-\d{2}-\d{2}T/);
+      expect(logger.info).toHaveBeenCalledOnce();
+      const message = logger.info.mock.calls[0][0] as string;
+      expect(message).toContain("order_456");
+      expect(message).toContain("could not hydrate");
     });
 
-    it("handles errors gracefully without throwing", async () => {
-      const infoFn = vi.fn().mockImplementation(() => {
-        throw new Error("Logger failed");
-      });
-      const errorFn = vi.fn();
+    it("never throws even if the logger itself fails", async () => {
+      const logger: MockLogger = {
+        info: vi.fn().mockImplementation(() => {
+          throw new Error("logger broken");
+        }),
+        error: vi.fn(),
+      };
+      const orderModule: MockOrderModule = {
+        retrieveOrder: vi.fn().mockResolvedValue({
+          id: "order_err_789",
+          email: null,
+          total: 0,
+          currency_code: "usd",
+        }),
+      };
       const args: MockSubscriberArgs = {
         event: { data: { id: "order_err_789" }, name: "order.placed" },
-        container: { resolve: () => ({ info: infoFn, error: errorFn }) },
+        container: buildContainer({ logger, orderModule }),
       };
 
       await expect(
         orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0]),
       ).resolves.toBeUndefined();
 
-      expect(errorFn).toHaveBeenCalledOnce();
-      expect(errorFn).toHaveBeenCalledWith(expect.stringContaining("order_err_789"));
-      expect(errorFn).toHaveBeenCalledWith(expect.stringContaining("Logger failed"));
-    });
-
-    it("handles non-Error objects in catch block", async () => {
-      const infoFn = vi.fn().mockImplementation(() => {
-        throw "string error";
-      });
-      const errorFn = vi.fn();
-      const args: MockSubscriberArgs = {
-        event: { data: { id: "order_str_err" }, name: "order.placed" },
-        container: { resolve: () => ({ info: infoFn, error: errorFn }) },
-      };
-
-      await expect(
-        orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0]),
-      ).resolves.toBeUndefined();
-
-      expect(errorFn).toHaveBeenCalledWith(expect.stringContaining("string error"));
+      expect(logger.error).toHaveBeenCalledOnce();
+      const errMessage = logger.error.mock.calls[0][0] as string;
+      expect(errMessage).toContain("order_err_789");
+      expect(errMessage).toContain("logger broken");
     });
   });
 });

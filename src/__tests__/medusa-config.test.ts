@@ -1,262 +1,278 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
-// We cannot directly import medusa-config.ts because it calls loadEnv and
-// defineConfig at module level with side effects. Instead, we test the
-// configuration logic patterns by simulating the same env-based decisions.
+// We test medusa-config.ts BY ACTUALLY IMPORTING IT (not by re-implementing
+// the env-handling logic in this file, which is what the previous version
+// of this test did and made the tests decorative). To do that we have to
+// stub the Medusa side-effects (loadEnv + defineConfig) before each
+// dynamic import, then re-import on a fresh module registry every time.
 
-describe("medusa-config logic", () => {
-  beforeEach(() => {
-    vi.unstubAllEnvs();
+vi.mock("@medusajs/framework/utils", () => ({
+  // loadEnv is a no-op in tests — we control process.env directly.
+  loadEnv: vi.fn(),
+  // defineConfig just echoes its input back so we can inspect what
+  // medusa-config.ts produced.
+  defineConfig: vi.fn((config: unknown) => config),
+}));
+
+type ConfigShape = {
+  projectConfig: {
+    databaseUrl: string;
+    databaseLogging: boolean;
+    redisUrl?: string;
+    workerMode: string;
+    http: {
+      storeCors: string;
+      adminCors: string;
+      authCors: string;
+      jwtSecret: string;
+      cookieSecret: string;
+      jwtExpiresIn: string;
+    };
+    cookieOptions: {
+      secure: boolean;
+      sameSite: "none" | "lax";
+      httpOnly: boolean;
+    };
+  };
+  admin: { backendUrl: string; path: string };
+  modules: Array<Record<string, unknown>>;
+};
+
+async function loadConfig(): Promise<ConfigShape> {
+  vi.resetModules();
+  // Re-import inside the test so each test sees a fresh evaluation
+  // against the current process.env state. The `.js` extension is
+  // required by NodeNext module resolution even though the source is
+  // a TypeScript file.
+  const mod = await import("../../medusa-config.js");
+  return mod.default as unknown as ConfigShape;
+}
+
+const ORIGINAL_ENV = { ...process.env };
+
+beforeEach(() => {
+  // Reset the env to a known minimal baseline before each test.
+  for (const k of Object.keys(process.env)) delete process.env[k];
+  Object.assign(process.env, {
+    DATABASE_URL: "postgres://test@localhost:5432/test",
+    NODE_ENV: "development",
+  });
+});
+
+afterEach(() => {
+  for (const k of Object.keys(process.env)) delete process.env[k];
+  Object.assign(process.env, ORIGINAL_ENV);
+});
+
+describe("medusa-config.ts (real module)", () => {
+  describe("DATABASE_URL handling", () => {
+    it("falls back to empty string when DATABASE_URL is missing (build-time tolerance)", async () => {
+      // medusa-config is evaluated by `medusa build` which has no DB
+      // connection, so the module must NOT throw on a missing DATABASE_URL.
+      // Runtime validation happens later, inside Medusa's connection layer.
+      delete process.env.DATABASE_URL;
+      const cfg = await loadConfig();
+      expect(cfg.projectConfig.databaseUrl).toBe("");
+    });
+
+    it("uses DATABASE_URL when provided", async () => {
+      process.env.DATABASE_URL = "postgres://x@y:5432/z";
+      const cfg = await loadConfig();
+      expect(cfg.projectConfig.databaseUrl).toBe("postgres://x@y:5432/z");
+    });
   });
 
-  describe("JWT_SECRET handling", () => {
-    it("throws in production when JWT_SECRET is missing", () => {
-      vi.stubEnv("NODE_ENV", "production");
-
-      const getJwtSecret = () => {
-        const secret = process.env.JWT_SECRET;
-        const isProduction = process.env.NODE_ENV === "production";
-        if (!secret && isProduction) throw new Error("JWT_SECRET is required in production");
-        return secret || "supersecret";
-      };
-
-      expect(() => getJwtSecret()).toThrowError("JWT_SECRET is required in production");
+  describe("databaseLogging from env", () => {
+    it("defaults to false", async () => {
+      const cfg = await loadConfig();
+      expect(cfg.projectConfig.databaseLogging).toBe(false);
     });
 
-    it("returns the secret in production when JWT_SECRET is set", () => {
-      vi.stubEnv("NODE_ENV", "production");
-      vi.stubEnv("JWT_SECRET", "my-prod-secret");
-
-      const getJwtSecret = () => {
-        const secret = process.env.JWT_SECRET;
-        const isProduction = process.env.NODE_ENV === "production";
-        if (!secret && isProduction) throw new Error("JWT_SECRET is required in production");
-        return secret || "supersecret";
-      };
-
-      expect(getJwtSecret()).toBe("my-prod-secret");
-    });
-
-    it("falls back to 'supersecret' in development when JWT_SECRET is missing", () => {
-      vi.stubEnv("NODE_ENV", "development");
-
-      const getJwtSecret = () => {
-        const secret = process.env.JWT_SECRET;
-        const isProduction = process.env.NODE_ENV === "production";
-        if (!secret && isProduction) throw new Error("JWT_SECRET is required in production");
-        return secret || "supersecret";
-      };
-
-      expect(getJwtSecret()).toBe("supersecret");
+    it("turns on when DATABASE_LOGGING=true", async () => {
+      process.env.DATABASE_LOGGING = "true";
+      const cfg = await loadConfig();
+      expect(cfg.projectConfig.databaseLogging).toBe(true);
     });
   });
 
-  describe("COOKIE_SECRET handling", () => {
-    it("throws in production when COOKIE_SECRET is missing", () => {
-      vi.stubEnv("NODE_ENV", "production");
-
-      const getCookieSecret = () => {
-        const secret = process.env.COOKIE_SECRET;
-        const isProduction = process.env.NODE_ENV === "production";
-        if (!secret && isProduction) throw new Error("COOKIE_SECRET is required in production");
-        return secret || "supersecret";
-      };
-
-      expect(() => getCookieSecret()).toThrowError("COOKIE_SECRET is required in production");
+  describe("JWT_SECRET / COOKIE_SECRET production gating", () => {
+    it("throws in production when JWT_SECRET is missing", async () => {
+      process.env.NODE_ENV = "production";
+      await expect(loadConfig()).rejects.toThrow(/JWT_SECRET is required in production/);
     });
 
-    it("returns the secret in production when COOKIE_SECRET is set", () => {
-      vi.stubEnv("NODE_ENV", "production");
-      vi.stubEnv("COOKIE_SECRET", "my-cookie-secret");
-
-      const getCookieSecret = () => {
-        const secret = process.env.COOKIE_SECRET;
-        const isProduction = process.env.NODE_ENV === "production";
-        if (!secret && isProduction) throw new Error("COOKIE_SECRET is required in production");
-        return secret || "supersecret";
-      };
-
-      expect(getCookieSecret()).toBe("my-cookie-secret");
+    it("throws in production when COOKIE_SECRET is missing", async () => {
+      process.env.NODE_ENV = "production";
+      process.env.JWT_SECRET = "x".repeat(32);
+      await expect(loadConfig()).rejects.toThrow(/COOKIE_SECRET is required in production/);
     });
 
-    it("falls back to 'supersecret' in development when COOKIE_SECRET is missing", () => {
-      vi.stubEnv("NODE_ENV", "development");
+    it("uses dev fallbacks in development", async () => {
+      const cfg = await loadConfig();
+      expect(cfg.projectConfig.http.jwtSecret).toBe("supersecret");
+      expect(cfg.projectConfig.http.cookieSecret).toBe("supersecret");
+    });
+  });
 
-      const getCookieSecret = () => {
-        const secret = process.env.COOKIE_SECRET;
-        const isProduction = process.env.NODE_ENV === "production";
-        if (!secret && isProduction) throw new Error("COOKIE_SECRET is required in production");
-        return secret || "supersecret";
-      };
+  describe("JWT_EXPIRES_IN", () => {
+    it("defaults to 1h", async () => {
+      const cfg = await loadConfig();
+      expect(cfg.projectConfig.http.jwtExpiresIn).toBe("1h");
+    });
 
-      expect(getCookieSecret()).toBe("supersecret");
+    it("respects override", async () => {
+      process.env.JWT_EXPIRES_IN = "30m";
+      const cfg = await loadConfig();
+      expect(cfg.projectConfig.http.jwtExpiresIn).toBe("30m");
     });
   });
 
   describe("CORS defaults", () => {
-    it("store CORS defaults to localhost:3000", () => {
-      delete process.env.STORE_CORS;
-      const storeCors = process.env.STORE_CORS || "http://localhost:3000";
-      expect(storeCors).toBe("http://localhost:3000");
+    it("falls back to localhost values", async () => {
+      const cfg = await loadConfig();
+      expect(cfg.projectConfig.http.storeCors).toBe("http://localhost:3000");
+      expect(cfg.projectConfig.http.adminCors).toBe("http://localhost:9000");
+      expect(cfg.projectConfig.http.authCors).toBe(
+        "http://localhost:3000,http://localhost:9000",
+      );
     });
 
-    it("admin CORS defaults to localhost:9000", () => {
-      delete process.env.ADMIN_CORS;
-      const adminCors = process.env.ADMIN_CORS || "http://localhost:9000";
-      expect(adminCors).toBe("http://localhost:9000");
-    });
-
-    it("auth CORS combines store and admin CORS by default", () => {
-      delete process.env.STORE_CORS;
-      delete process.env.ADMIN_CORS;
-      delete process.env.AUTH_CORS;
-
-      const storeCors = process.env.STORE_CORS || "http://localhost:3000";
-      const adminCors = process.env.ADMIN_CORS || "http://localhost:9000";
-      const authCors = process.env.AUTH_CORS || `${storeCors},${adminCors}`;
-
-      expect(authCors).toBe("http://localhost:3000,http://localhost:9000");
-    });
-
-    it("respects custom CORS environment variables", () => {
-      vi.stubEnv("STORE_CORS", "https://store.veloura.com");
-      vi.stubEnv("ADMIN_CORS", "https://admin.veloura.com");
-
-      const storeCors = process.env.STORE_CORS || "http://localhost:3000";
-      const adminCors = process.env.ADMIN_CORS || "http://localhost:9000";
-
-      expect(storeCors).toBe("https://store.veloura.com");
-      expect(adminCors).toBe("https://admin.veloura.com");
+    it("respects custom CORS env vars", async () => {
+      process.env.STORE_CORS = "https://store.veloura.com";
+      process.env.ADMIN_CORS = "https://admin.veloura.com";
+      process.env.AUTH_CORS = "https://auth.veloura.com";
+      const cfg = await loadConfig();
+      expect(cfg.projectConfig.http.storeCors).toBe("https://store.veloura.com");
+      expect(cfg.projectConfig.http.adminCors).toBe("https://admin.veloura.com");
+      expect(cfg.projectConfig.http.authCors).toBe("https://auth.veloura.com");
     });
   });
 
-  describe("Redis modules conditional loading", () => {
-    it("loads Redis modules when REDIS_URL is set", () => {
-      vi.stubEnv("REDIS_URL", "redis://localhost:6379");
-
-      const modules: Record<string, unknown>[] = [];
-      const redisUrl = process.env.REDIS_URL;
-
-      if (redisUrl) {
-        modules.push(
-          {
-            resolve: "@medusajs/medusa/event-bus-redis",
-            options: { redisUrl },
-          },
-          {
-            resolve: "@medusajs/medusa/cache-redis",
-            options: { redisUrl },
-          },
-          {
-            resolve: "@medusajs/medusa/workflow-engine-redis",
-            options: { redis: { redisUrl } },
-          },
-        );
-      }
-
-      expect(modules).toHaveLength(3);
-      expect(modules[0].resolve).toBe("@medusajs/medusa/event-bus-redis");
-      expect(modules[1].resolve).toBe("@medusajs/medusa/cache-redis");
-      expect(modules[2].resolve).toBe("@medusajs/medusa/workflow-engine-redis");
+  describe("Redis modules with separate logical DBs", () => {
+    it("does not load Redis modules when REDIS_URL is not set", async () => {
+      const cfg = await loadConfig();
+      const redisModules = cfg.modules.filter((m) =>
+        String(m.resolve).includes("redis"),
+      );
+      expect(redisModules).toHaveLength(0);
     });
 
-    it("does not load Redis modules when REDIS_URL is not set", () => {
-      delete process.env.REDIS_URL;
+    it("loads three Redis modules with /0, /1, /2 namespaces", async () => {
+      process.env.REDIS_URL = "redis://redis:6379";
+      const cfg = await loadConfig();
+      const redisModules = cfg.modules.filter((m) =>
+        String(m.resolve).includes("redis"),
+      );
+      expect(redisModules).toHaveLength(3);
 
-      const modules: Record<string, unknown>[] = [];
-      const redisUrl = process.env.REDIS_URL;
+      // Verify each module uses a different Redis DB number.
+      const eventBus = redisModules.find((m) => String(m.resolve).includes("event-bus"));
+      const cache = redisModules.find((m) => String(m.resolve).includes("cache"));
+      const workflow = redisModules.find((m) => String(m.resolve).includes("workflow"));
+      expect(eventBus).toBeDefined();
+      expect(cache).toBeDefined();
+      expect(workflow).toBeDefined();
 
-      if (redisUrl) {
-        modules.push({
-          resolve: "@medusajs/medusa/event-bus-redis",
-          options: { redisUrl },
-        });
-      }
+      const eventOpts = (eventBus!.options as { redisUrl: string }).redisUrl;
+      const cacheOpts = (cache!.options as { redisUrl: string }).redisUrl;
+      const workflowOpts = (workflow!.options as { redis: { url: string } }).redis.url;
 
-      expect(modules).toHaveLength(0);
+      expect(eventOpts).toBe("redis://redis:6379/1");
+      expect(cacheOpts).toBe("redis://redis:6379/0");
+      expect(workflowOpts).toBe("redis://redis:6379/2");
     });
   });
 
-  describe("Stripe module conditional loading", () => {
-    it("loads Stripe module when STRIPE_API_KEY is set", () => {
-      vi.stubEnv("STRIPE_API_KEY", "sk_test_123");
-      vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_123");
-
-      const modules: Record<string, unknown>[] = [];
-
-      if (process.env.STRIPE_API_KEY) {
-        modules.push({
-          resolve: "@medusajs/medusa/payment",
-          options: {
-            providers: [
-              {
-                resolve: "@medusajs/medusa/payment-stripe",
-                id: "stripe",
-                options: {
-                  apiKey: process.env.STRIPE_API_KEY,
-                  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-                  capture: false,
-                  automatic_payment_methods: true,
-                },
-              },
-            ],
-          },
-        });
-      }
-
-      expect(modules).toHaveLength(1);
-      expect(modules[0].resolve).toBe("@medusajs/medusa/payment");
+  describe("Stripe module gating", () => {
+    it("does not load Stripe when STRIPE_API_KEY is unset", async () => {
+      const cfg = await loadConfig();
+      const payment = cfg.modules.find((m) => String(m.resolve).includes("payment"));
+      expect(payment).toBeUndefined();
     });
 
-    it("does not load Stripe module when STRIPE_API_KEY is not set", () => {
-      delete process.env.STRIPE_API_KEY;
+    it("loads Stripe in dev with key but no webhook secret", async () => {
+      process.env.STRIPE_API_KEY = "sk_test_x";
+      const cfg = await loadConfig();
+      const payment = cfg.modules.find((m) => String(m.resolve).includes("payment"));
+      expect(payment).toBeDefined();
+    });
 
-      const modules: Record<string, unknown>[] = [];
+    it("throws in production when STRIPE_API_KEY is set but webhook secret is missing", async () => {
+      process.env.NODE_ENV = "production";
+      process.env.JWT_SECRET = "x".repeat(32);
+      process.env.COOKIE_SECRET = "y".repeat(32);
+      process.env.STRIPE_API_KEY = "sk_live_x";
+      // STRIPE_WEBHOOK_SECRET intentionally omitted.
+      await expect(loadConfig()).rejects.toThrow(/STRIPE_WEBHOOK_SECRET is required/);
+    });
 
-      if (process.env.STRIPE_API_KEY) {
-        modules.push({
-          resolve: "@medusajs/medusa/payment",
-          options: {},
-        });
-      }
-
-      expect(modules).toHaveLength(0);
+    it("loads Stripe in production when both vars are set", async () => {
+      process.env.NODE_ENV = "production";
+      process.env.JWT_SECRET = "x".repeat(32);
+      process.env.COOKIE_SECRET = "y".repeat(32);
+      process.env.STRIPE_API_KEY = "sk_live_x";
+      process.env.STRIPE_WEBHOOK_SECRET = "whsec_x";
+      const cfg = await loadConfig();
+      const payment = cfg.modules.find((m) => String(m.resolve).includes("payment"));
+      expect(payment).toBeDefined();
     });
   });
 
-  describe("backend URL defaults", () => {
-    it("defaults to localhost:9000", () => {
-      delete process.env.MEDUSA_BACKEND_URL;
-      const backendUrl = process.env.MEDUSA_BACKEND_URL || "http://localhost:9000";
-      expect(backendUrl).toBe("http://localhost:9000");
+  describe("file storage provider", () => {
+    it("uses file-local when S3_BUCKET is not set", async () => {
+      const cfg = await loadConfig();
+      const fileMod = cfg.modules.find((m) => String(m.resolve).endsWith("/file"));
+      expect(fileMod).toBeDefined();
+      const providers = (fileMod!.options as { providers: Array<{ resolve: string }> })
+        .providers;
+      expect(providers[0].resolve).toContain("file-local");
     });
 
-    it("respects custom MEDUSA_BACKEND_URL", () => {
-      vi.stubEnv("MEDUSA_BACKEND_URL", "https://api.veloura.com");
-      const backendUrl = process.env.MEDUSA_BACKEND_URL || "http://localhost:9000";
-      expect(backendUrl).toBe("https://api.veloura.com");
+    it("uses file-s3 when S3_BUCKET is set", async () => {
+      process.env.S3_BUCKET = "medusa-media";
+      process.env.S3_ENDPOINT = "http://minio:9000";
+      process.env.S3_ACCESS_KEY_ID = "x";
+      process.env.S3_SECRET_ACCESS_KEY = "y";
+      const cfg = await loadConfig();
+      const fileMod = cfg.modules.find((m) => String(m.resolve).endsWith("/file"));
+      expect(fileMod).toBeDefined();
+      const providers = (fileMod!.options as { providers: Array<{ resolve: string }> })
+        .providers;
+      expect(providers[0].resolve).toContain("file-s3");
     });
   });
 
-  describe("database configuration", () => {
-    it("disables SSL in non-production", () => {
-      vi.stubEnv("NODE_ENV", "development");
-      const isProduction = process.env.NODE_ENV === "production";
-      const driverOptions = isProduction
-        ? { connection: { ssl: { rejectUnauthorized: false } } }
-        : {};
-      expect(driverOptions).toEqual({});
+  describe("admin path and backend URL", () => {
+    it("admin path is /veloura", async () => {
+      const cfg = await loadConfig();
+      expect(cfg.admin.path).toBe("/veloura");
     });
 
-    it("enables SSL in production", () => {
-      vi.stubEnv("NODE_ENV", "production");
-      const isProduction = process.env.NODE_ENV === "production";
-      const driverOptions = isProduction
-        ? { connection: { ssl: { rejectUnauthorized: false } } }
-        : {};
-      expect(driverOptions).toEqual({
-        connection: { ssl: { rejectUnauthorized: false } },
-      });
+    it("backendUrl defaults to localhost:9000", async () => {
+      const cfg = await loadConfig();
+      expect(cfg.admin.backendUrl).toBe("http://localhost:9000");
+    });
+
+    it("backendUrl respects MEDUSA_BACKEND_URL", async () => {
+      process.env.MEDUSA_BACKEND_URL = "https://api.veloura.com";
+      const cfg = await loadConfig();
+      expect(cfg.admin.backendUrl).toBe("https://api.veloura.com");
+    });
+  });
+
+  describe("cookie options", () => {
+    it("defaults to lax + insecure", async () => {
+      const cfg = await loadConfig();
+      expect(cfg.projectConfig.cookieOptions.sameSite).toBe("lax");
+      expect(cfg.projectConfig.cookieOptions.secure).toBe(false);
+      expect(cfg.projectConfig.cookieOptions.httpOnly).toBe(true);
+    });
+
+    it("switches to none + secure when COOKIE_SECURE=true", async () => {
+      process.env.COOKIE_SECURE = "true";
+      const cfg = await loadConfig();
+      expect(cfg.projectConfig.cookieOptions.sameSite).toBe("none");
+      expect(cfg.projectConfig.cookieOptions.secure).toBe(true);
     });
   });
 });

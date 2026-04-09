@@ -1,16 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
 
-// Mock Medusa's defineMiddlewares to capture the config object
+// Mock Medusa's defineMiddlewares to capture the config object verbatim
+// (so the test can introspect routes/middlewares).
 vi.mock("@medusajs/medusa", () => ({
   defineMiddlewares: (config: unknown) => config,
 }));
 
-// Mock crypto.randomUUID
+// Mock crypto.randomUUID for deterministic assertions
 vi.mock("crypto", () => ({
   randomUUID: () => "test-uuid-1234",
 }));
-
-import middlewareConfig from "../../api/middlewares";
 
 interface MockReq {
   headers: Record<string, string | undefined>;
@@ -26,43 +25,55 @@ interface MockRes {
 
 type MiddlewareFn = (req: MockReq, res: MockRes, next: () => void) => void;
 
+interface RouteShape {
+  matcher: string;
+  middlewares: MiddlewareFn[];
+}
+
+interface MiddlewareConfigShape {
+  routes: RouteShape[];
+}
+
+async function loadConfig(env: "production" | "development"): Promise<MiddlewareConfigShape> {
+  vi.resetModules();
+  const previousEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = env;
+  try {
+    const mod = await import("../../api/middlewares.js");
+    return mod.default as unknown as MiddlewareConfigShape;
+  } finally {
+    process.env.NODE_ENV = previousEnv;
+  }
+}
+
 describe("middleware configuration", () => {
-  it("exports a valid config with routes array", () => {
-    expect(middlewareConfig).toBeDefined();
-    expect(middlewareConfig).toHaveProperty("routes");
-    expect(Array.isArray(middlewareConfig.routes)).toBe(true);
-  });
-
-  it("has exactly 2 route definitions", () => {
-    expect(middlewareConfig.routes).toHaveLength(2);
-  });
-
-  it("first route matches /store/*", () => {
-    const storeRoute = middlewareConfig.routes[0];
-    expect(storeRoute.matcher).toBe("/store/*");
-    expect(Array.isArray(storeRoute.middlewares)).toBe(true);
-    expect(storeRoute.middlewares).toHaveLength(1);
-  });
-
-  it("second route matches /*", () => {
-    const globalRoute = middlewareConfig.routes[1];
-    expect(globalRoute.matcher).toBe("/*");
-    expect(Array.isArray(globalRoute.middlewares)).toBe(true);
-    expect(globalRoute.middlewares).toHaveLength(1);
-  });
-
-  it("middleware functions are callable", () => {
-    for (const route of middlewareConfig.routes) {
-      for (const mw of route.middlewares) {
-        expect(typeof mw).toBe("function");
-      }
+  it("exposes a /store/* route in both prod and dev", async () => {
+    for (const env of ["production", "development"] as const) {
+      const cfg = await loadConfig(env);
+      const storeRoute = cfg.routes.find((r) => r.matcher === "/store/*");
+      expect(storeRoute, `missing /store/* route in ${env}`).toBeDefined();
+      expect(storeRoute!.middlewares.length).toBeGreaterThanOrEqual(1);
     }
   });
 
-  describe("store request-id middleware", () => {
-    const storeMiddleware = middlewareConfig.routes[0].middlewares[0] as MiddlewareFn;
+  it("registers the dev-only CORS debug middleware in development", async () => {
+    const cfg = await loadConfig("development");
+    const globalRoute = cfg.routes.find((r) => r.matcher === "/*");
+    expect(globalRoute).toBeDefined();
+  });
 
-    it("sets x-request-id from header when provided", () => {
+  it("does NOT register the dev-only CORS debug middleware in production", async () => {
+    const cfg = await loadConfig("production");
+    const globalRoute = cfg.routes.find((r) => r.matcher === "/*");
+    expect(globalRoute).toBeUndefined();
+  });
+
+  describe("store request-id middleware", () => {
+    it("sets x-request-id from header when provided", async () => {
+      const cfg = await loadConfig("development");
+      const storeMiddleware = cfg.routes.find((r) => r.matcher === "/store/*")!
+        .middlewares[0];
+
       const req: MockReq = { headers: { "x-request-id": "existing-id-456" } };
       const setHeaderCalls: [string, string][] = [];
       const res: MockRes = {
@@ -79,7 +90,11 @@ describe("middleware configuration", () => {
       expect(next).toHaveBeenCalledOnce();
     });
 
-    it("generates a UUID when x-request-id header is not present", () => {
+    it("generates a UUID when x-request-id header is not present", async () => {
+      const cfg = await loadConfig("development");
+      const storeMiddleware = cfg.routes.find((r) => r.matcher === "/store/*")!
+        .middlewares[0];
+
       const req: MockReq = { headers: {} };
       const setHeaderCalls: [string, string][] = [];
       const res: MockRes = {
@@ -97,27 +112,11 @@ describe("middleware configuration", () => {
     });
   });
 
-  describe("global CORS debug middleware", () => {
-    const corsMiddleware = middlewareConfig.routes[1].middlewares[0] as MiddlewareFn;
-
-    it("calls next() regardless of environment", () => {
-      const req: MockReq = {
-        headers: {},
-        scope: { resolve: () => undefined },
-        method: "GET",
-        path: "/store/products",
-      };
-      const res: MockRes = {};
-      const next = vi.fn();
-
-      corsMiddleware(req, res, next);
-
-      expect(next).toHaveBeenCalledOnce();
-    });
-
-    it("logs origin in non-production when origin header is present", () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = "development";
+  describe("dev-only CORS debug middleware", () => {
+    it("calls next() and logs origin when present", async () => {
+      const cfg = await loadConfig("development");
+      const corsMiddleware = cfg.routes.find((r) => r.matcher === "/*")!
+        .middlewares[0];
 
       const debugFn = vi.fn();
       const req: MockReq = {
@@ -135,17 +134,16 @@ describe("middleware configuration", () => {
         "[CORS] GET /store/products from origin: http://localhost:3000",
       );
       expect(next).toHaveBeenCalledOnce();
-
-      process.env.NODE_ENV = originalEnv;
     });
 
-    it("does not log in production", () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = "production";
+    it("calls next() but does not log when no origin header", async () => {
+      const cfg = await loadConfig("development");
+      const corsMiddleware = cfg.routes.find((r) => r.matcher === "/*")!
+        .middlewares[0];
 
       const debugFn = vi.fn();
       const req: MockReq = {
-        headers: { origin: "https://veloura.com" },
+        headers: {},
         scope: { resolve: () => ({ debug: debugFn }) },
         method: "GET",
         path: "/store/products",
@@ -157,8 +155,6 @@ describe("middleware configuration", () => {
 
       expect(debugFn).not.toHaveBeenCalled();
       expect(next).toHaveBeenCalledOnce();
-
-      process.env.NODE_ENV = originalEnv;
     });
   });
 });

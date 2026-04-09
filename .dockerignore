@@ -1,11 +1,29 @@
 # node_modules, .medusa and dist are pre-built on the host (see Dockerfile)
 # because running `npm ci` and `npm run build` inside a Docker build container
 # is pathologically slow on this VPS — likely a kernel/libuv interaction.
+# We DO ship them in the build context (the Dockerfile expects them).
+
+# Secrets — never ship into the image
 .env
 .env.*
 !.env.example
+
+# VCS / IDE / OS noise
 .git
 .github
-coverage
-*.log
+.idea
+.vscode
+*.swp
+*.swo
 .DS_Store
+
+# Test artifacts
+coverage
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+
+# Backups (server-side data, not part of an image)
+backups
+logs
