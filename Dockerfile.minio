@@ -50,7 +50,12 @@ ENV MINIO_UPDATE=off \
     MINIO_BROWSER_REDIRECT_URL="" \
     MINIO_PROMETHEUS_AUTH_TYPE=public
 
-VOLUME /data
+# NB: NO `VOLUME /data` here. Both `minio` and `minio-init` services use
+# this image. The `minio` service binds the named volume veloura_minio_data
+# at /data via compose. `minio-init` does NOT need /data (it only runs mc
+# commands against the network), so we don't want Docker auto-creating
+# anonymous volumes for it on every deploy. The compose mount handles
+# the actual persistence.
 WORKDIR /data
 EXPOSE 9000 9001
 

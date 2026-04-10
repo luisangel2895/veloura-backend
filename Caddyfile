@@ -2,7 +2,6 @@
 # When a real domain is added, switch the site address from `:80` to
 # `api.veloura.com`/`admin.veloura.com`, re-enable HSTS in the headers
 # block, and remove the path-based admin routing.
-
 {
 	# Global options. The admin endpoint stays bound to localhost so the
 	# Caddy admin API is not reachable from the network.
@@ -48,8 +47,8 @@
 		reverse_proxy minio:9000 {
 			header_up Host {upstream_hostport}
 			header_up X-Real-IP {remote_host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
+			# Note: X-Forwarded-For and X-Forwarded-Proto are added by
+			# Caddy automatically for reverse_proxy, no need to set them.
 
 			# Reasonable transport timeouts so a slow MinIO doesn't hang Caddy.
 			transport http {
@@ -77,10 +76,9 @@
 			max_size 16KB
 		}
 		reverse_proxy medusa:9000 {
-			header_up Host {host}
 			header_up X-Real-IP {remote_host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
+			# X-Forwarded-For and X-Forwarded-Proto are set automatically
+			# by Caddy's reverse_proxy directive.
 			transport http {
 				dial_timeout 5s
 				response_header_timeout 30s
@@ -91,10 +89,8 @@
 	# ── Everything else → Medusa (API at /, admin at /veloura) ─────
 	handle {
 		reverse_proxy medusa:9000 {
-			header_up Host {host}
 			header_up X-Real-IP {remote_host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
+			# X-Forwarded-For and X-Forwarded-Proto are set automatically.
 			transport http {
 				dial_timeout 5s
 				response_header_timeout 60s
