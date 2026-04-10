@@ -11,7 +11,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "20.18.0"
+  # 20.20.0+ is required because vitest 4.x dynamically requires
+  # std-env (an ESM-only package). Node < 20.20 throws ERR_REQUIRE_ESM
+  # at vitest startup. Pinning to 20.20.2 (current LTS minor with
+  # require(esm) supported by default) for reproducibility.
+  NODE_VERSION: "20.20.2"
   # Bake a placeholder backend URL into the admin bundle for the CI
   # validation build. The CI artifact is never deployed; the real value
   # is set on the server by the deploy workflow.
@@ -59,16 +63,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Print versions for debugging
-        run: |
-          echo "node:    $(node --version)"
-          echo "npm:     $(npm --version)"
-          echo "vitest:  $(npx vitest --version)"
-          echo "OS:      $(uname -a)"
-      - name: Run tests (no coverage)
-        run: npx vitest run --reporter=verbose
-      - name: Run coverage
-        run: npx vitest run --coverage
+      - name: Run tests with coverage
+        run: npm run test:coverage
       - name: Upload coverage artifact
         # Only run when coverage/ exists. v4 of upload-artifact is
         # deprecated and was failing in our CI runner — bumped to v7
