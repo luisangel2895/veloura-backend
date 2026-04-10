@@ -1,0 +1,29 @@
+name: Weekly dependency audit
+
+# `npm audit` on Medusa's full dep tree takes 8-10 minutes — too slow
+# to run on every push without becoming a bottleneck. Run weekly on a
+# cron and on manual trigger instead. The result is still surfaced as
+# a failed workflow on the repo.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays at 06:00 UTC (~01:00 Lima)
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "20.20.2"
+
+jobs:
+  audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: npm audit (production deps only, fail on high+)
+        run: npm audit --omit=dev --audit-level=high
