@@ -110,6 +110,64 @@ describe("order-placed subscriber", () => {
       expect(message).toContain("could not hydrate");
     });
 
+    it("renders fallbacks when order email/total/currency are null", async () => {
+      // Covers the `email ?? "-"`, `total ?? 0`, `currency_code ?? "-"`
+      // branches in the log message template.
+      const logger: MockLogger = { info: vi.fn(), error: vi.fn() };
+      const orderModule: MockOrderModule = {
+        retrieveOrder: vi.fn().mockResolvedValue({
+          id: "order_no_fields",
+          email: null,
+          total: null,
+          currency_code: null,
+        }),
+      };
+      const args: MockSubscriberArgs = {
+        event: { data: { id: "order_no_fields" }, name: "order.placed" },
+        container: buildContainer({ logger, orderModule }),
+      };
+
+      await orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0]);
+
+      expect(logger.info).toHaveBeenCalledOnce();
+      const message = logger.info.mock.calls[0][0] as string;
+      expect(message).toContain("order_no_fields");
+      expect(message).toContain("email=-");
+      expect(message).toContain("total=0");
+    });
+
+    it("handles non-Error throws (covers String(error) branch)", async () => {
+      const logger: MockLogger = {
+        info: vi.fn().mockImplementation(() => {
+          // Throwing a non-Error so the handler hits the
+          // `: String(error)` side of the ternary in the catch block.
+          throw "string-not-error";
+        }),
+        error: vi.fn(),
+      };
+      const orderModule: MockOrderModule = {
+        retrieveOrder: vi.fn().mockResolvedValue({
+          id: "order_str_throw",
+          email: "x@x.com",
+          total: 10,
+          currency_code: "usd",
+        }),
+      };
+      const args: MockSubscriberArgs = {
+        event: { data: { id: "order_str_throw" }, name: "order.placed" },
+        container: buildContainer({ logger, orderModule }),
+      };
+
+      await expect(
+        orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0]),
+      ).resolves.toBeUndefined();
+
+      expect(logger.error).toHaveBeenCalledOnce();
+      const errMessage = logger.error.mock.calls[0][0] as string;
+      expect(errMessage).toContain("order_str_throw");
+      expect(errMessage).toContain("string-not-error");
+    });
+
     it("never throws even if the logger itself fails", async () => {
       const logger: MockLogger = {
         info: vi.fn().mockImplementation(() => {
@@ -138,6 +196,39 @@ describe("order-placed subscriber", () => {
       const errMessage = logger.error.mock.calls[0][0] as string;
       expect(errMessage).toContain("order_err_789");
       expect(errMessage).toContain("logger broken");
+    });
+
+    it("survives even when the inner logger.error ALSO throws", async () => {
+      // Both logger.info and logger.error throw. The handler must not
+      // propagate the error — covers the inner empty `catch {}` block.
+      const logger: MockLogger = {
+        info: vi.fn().mockImplementation(() => {
+          throw new Error("info broken");
+        }),
+        error: vi.fn().mockImplementation(() => {
+          throw new Error("error broken");
+        }),
+      };
+      const orderModule: MockOrderModule = {
+        retrieveOrder: vi.fn().mockResolvedValue({
+          id: "order_double_err",
+          email: null,
+          total: 0,
+          currency_code: "usd",
+        }),
+      };
+      const args: MockSubscriberArgs = {
+        event: { data: { id: "order_double_err" }, name: "order.placed" },
+        container: buildContainer({ logger, orderModule }),
+      };
+
+      await expect(
+        orderPlacedHandler(args as Parameters<typeof orderPlacedHandler>[0]),
+      ).resolves.toBeUndefined();
+
+      // Both were called once each, but neither caused the handler to throw.
+      expect(logger.info).toHaveBeenCalledOnce();
+      expect(logger.error).toHaveBeenCalledOnce();
     });
   });
 });
