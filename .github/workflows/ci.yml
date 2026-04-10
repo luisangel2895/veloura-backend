@@ -65,8 +65,10 @@ jobs:
           echo "npm:     $(npm --version)"
           echo "vitest:  $(npx vitest --version)"
           echo "OS:      $(uname -a)"
-      - name: Run tests with coverage (verbose)
-        run: npx vitest run --coverage --reporter=verbose
+      - name: Run tests (no coverage)
+        run: npx vitest run --reporter=verbose
+      - name: Run coverage
+        run: npx vitest run --coverage
       - name: Upload coverage artifact
         # Only run when coverage/ exists. v4 of upload-artifact is
         # deprecated and was failing in our CI runner — bumped to v7
