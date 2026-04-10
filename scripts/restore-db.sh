@@ -52,11 +52,22 @@ if [ "${SKIP_PRE_RESTORE_BACKUP:-0}" != "1" ] && [ "$MODE" = "docker" ]; then
 fi
 
 if [ "$MODE" = "docker" ]; then
+  # Read POSTGRES_PASSWORD from .env.prod for psql auth (scram-sha-256
+  # is enforced in pg_hba.conf, so passwordless connections fail).
+  if [ -z "${POSTGRES_PASSWORD:-}" ] && [ -f .env.prod ]; then
+    POSTGRES_PASSWORD=$(grep -E '^POSTGRES_PASSWORD=' .env.prod | cut -d= -f2-)
+  fi
+  if [ -z "${POSTGRES_PASSWORD:-}" ]; then
+    echo "Error: POSTGRES_PASSWORD not set and not found in .env.prod" >&2
+    exit 5
+  fi
+
   echo ">>> Stopping medusa + worker to release table locks"
   docker compose -f docker-compose.prod.yml "${ENV_FILE_ARG[@]}" stop medusa medusa-worker
 
   echo ">>> Restoring database"
-  gunzip -c "$BACKUP_FILE" | docker compose -f docker-compose.prod.yml "${ENV_FILE_ARG[@]}" exec -T postgres \
+  gunzip -c "$BACKUP_FILE" | docker compose -f docker-compose.prod.yml "${ENV_FILE_ARG[@]}" exec -T \
+    -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
     psql --set ON_ERROR_STOP=on -U "${POSTGRES_USER:-veloura}" -d "${POSTGRES_DB:-veloura_medusa}"
 
   echo ">>> Restarting medusa + worker"

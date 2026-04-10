@@ -37,7 +37,21 @@ if [ "$MODE" = "docker" ]; then
   # print noisy "variable not set" warnings while parsing the YAML.
   ENV_FILE_ARG=()
   [ -f .env.prod ] && ENV_FILE_ARG=(--env-file .env.prod)
-  docker compose -f docker-compose.prod.yml "${ENV_FILE_ARG[@]}" exec -T postgres \
+
+  # Read POSTGRES_PASSWORD from .env.prod and pass it to pg_dump via
+  # PGPASSWORD env var. Required since the postgres container now uses
+  # scram-sha-256 auth (no more trust auth on local socket). Without
+  # this, pg_dump fails with "fe_sendauth: no password supplied".
+  if [ -z "${POSTGRES_PASSWORD:-}" ] && [ -f .env.prod ]; then
+    POSTGRES_PASSWORD=$(grep -E '^POSTGRES_PASSWORD=' .env.prod | cut -d= -f2-)
+  fi
+  if [ -z "${POSTGRES_PASSWORD:-}" ]; then
+    echo "Error: POSTGRES_PASSWORD not set and not found in .env.prod" >&2
+    exit 5
+  fi
+
+  docker compose -f docker-compose.prod.yml "${ENV_FILE_ARG[@]}" exec -T \
+    -e PGPASSWORD="$POSTGRES_PASSWORD" postgres \
     pg_dump "${PGDUMP_FLAGS[@]}" -U "${POSTGRES_USER:-veloura}" "${POSTGRES_DB:-veloura_medusa}" \
     | gzip -9 > "$TMP_DEST"
 elif [ "$MODE" = "local" ]; then
