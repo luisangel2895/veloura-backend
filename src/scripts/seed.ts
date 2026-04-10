@@ -1,4 +1,4 @@
-import { ExecArgs } from "@medusajs/framework/types";
+import type { ExecArgs } from "@medusajs/framework/types";
 import { ContainerRegistrationKeys, Modules, ProductStatus } from "@medusajs/framework/utils";
 import {
   createProductCategoriesWorkflow,

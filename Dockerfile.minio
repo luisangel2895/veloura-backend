@@ -19,10 +19,12 @@ ARG MINIO_SHA256=7c5bd8512c6e966455b1d198209358b2d191c77a83ab377c4073281065fb855
 ARG MC_VERSION=RELEASE.2025-08-13T08-35-41Z
 ARG MC_SHA256=01f866e9c5f9b87c2b09116fa5d7c06695b106242d829a8bb32990c00312e891
 
-# Runtime-only deps. tini is used as PID 1 so signal handling and zombie
-# reaping work correctly. wget is part of busybox; ca-certs are needed
-# for TLS to S3 mirrors. (No bash — the entrypoint uses /bin/sh.)
-RUN apk add --no-cache ca-certificates tini && \
+# Runtime-only deps:
+#   ca-certificates → outbound TLS
+#   su-exec         → drop privileges in the entrypoint script
+# (No bash — entrypoint is sh. No tini — compose `init: true` provides
+#  PID 1 so we don't double up.)
+RUN apk add --no-cache ca-certificates su-exec && \
     wget -q -O /usr/bin/minio \
       "https://dl.min.io/server/minio/release/linux-amd64/archive/minio.${MINIO_VERSION}" && \
     echo "${MINIO_SHA256}  /usr/bin/minio" | sha256sum -c - && \
@@ -38,6 +40,12 @@ RUN apk add --no-cache ca-certificates tini && \
     mkdir -p /data && \
     chown -R minio:minio /data
 
+# Entrypoint runs as root briefly to ensure /data is writable by minio
+# (uid 1000), then drops privileges via su-exec. This makes the image
+# work on a fresh docker volume (default root ownership) without manual
+# chown from the host.
+COPY --chmod=755 scripts/minio-entrypoint.sh /usr/local/bin/entrypoint.sh
+
 ENV MINIO_UPDATE=off \
     MINIO_BROWSER_REDIRECT_URL="" \
     MINIO_PROMETHEUS_AUTH_TYPE=public
@@ -46,13 +54,12 @@ VOLUME /data
 WORKDIR /data
 EXPOSE 9000 9001
 
-USER minio
-
 # Container-level healthcheck. Uses `mc ready local` which auto-resolves
 # the alias from MC_HOST_local env var (set by docker-compose).
 HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
     CMD mc ready local || exit 1
 
-# PID 1 / zombie reaping is handled by docker-compose `init: true`.
-ENTRYPOINT ["/usr/bin/minio"]
+# Note: NO `USER minio` directive — the entrypoint script needs root for
+# the volume chown, then drops to minio via su-exec.
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["server", "/data", "--console-address", ":9001"]

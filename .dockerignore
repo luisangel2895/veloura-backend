@@ -23,6 +23,8 @@ coverage
 **/*.test.ts
 **/*.test.tsx
 **/*.spec.ts
+tsconfig.test.json
+vitest.config.ts
 
 # Backups (server-side data, not part of an image)
 backups

@@ -20,23 +20,16 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          command_timeout: 20m
+          command_timeout: 30m
           script_stop: true
-          envs: MEDUSA_BACKEND_URL_OVERRIDE
           script: |
             set -euo pipefail
             cd /home/deploy/apps/veloura
 
-            # The admin UI bundle bakes MEDUSA_BACKEND_URL at build time.
-            # Allow the workflow to override via env (for staging/preview),
-            # otherwise read from .env.prod on the server.
-            if [ -n "${MEDUSA_BACKEND_URL_OVERRIDE:-}" ]; then
-              export MEDUSA_BACKEND_URL="${MEDUSA_BACKEND_URL_OVERRIDE}"
-            else
-              # Source from .env.prod (single line, robust to whitespace)
-              MEDUSA_BACKEND_URL=$(grep -E '^MEDUSA_BACKEND_URL=' .env.prod | cut -d= -f2-)
-              export MEDUSA_BACKEND_URL
-            fi
+            # Read MEDUSA_BACKEND_URL from .env.prod (it has to be baked
+            # into the admin UI bundle at build time, see quirks #4).
+            MEDUSA_BACKEND_URL=$(grep -E '^MEDUSA_BACKEND_URL=' .env.prod | cut -d= -f2-)
+            export MEDUSA_BACKEND_URL
             echo ">>> MEDUSA_BACKEND_URL=$MEDUSA_BACKEND_URL"
 
             # Save the previous image hash so we can roll back if the
@@ -59,9 +52,14 @@ jobs:
             rm -rf node_modules
             npm ci --omit=dev --no-audit --no-fund
 
-            echo ">>> Docker rebuild & restart medusa stack"
+            echo ">>> Docker rebuild & restart full stack"
+            # No service list — recreate every container that has a
+            # changed config or image. This way edits to Caddyfile,
+            # postgres config, redis command, minio Dockerfile, etc.
+            # all take effect on the next deploy without needing manual
+            # intervention.
             docker compose -f docker-compose.prod.yml --env-file .env.prod \
-              up -d --build --force-recreate --remove-orphans medusa medusa-worker
+              up -d --build --force-recreate --remove-orphans
 
             echo ">>> Reload Caddy (Caddyfile is bind-mounted from host)"
             docker compose -f docker-compose.prod.yml --env-file .env.prod \

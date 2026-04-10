@@ -17,6 +17,15 @@
 }
 
 :80 {
+	# ── Dedicated Caddy self-healthcheck ───────────────────────────
+	# Returns 200 OK WITHOUT going through the medusa proxy. Used by the
+	# compose healthcheck so caddy's status reflects caddy's own state,
+	# not the upstream's (avoids cascading failures where caddy reports
+	# unhealthy just because medusa is restarting).
+	handle /caddyhealth {
+		respond "OK" 200
+	}
+
 	# ── Compression ────────────────────────────────────────────────
 	# zstd first (modern, better ratio), then gzip as fallback. Brotli
 	# is not available in the upstream caddy:2-alpine image (would need

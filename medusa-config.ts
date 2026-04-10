@@ -124,6 +124,8 @@ if (process.env.STRIPE_API_KEY) {
 }
 
 // ── Production: Redis-backed infrastructure ──────────────────────
+// Each module uses a different logical Redis DB (/0 /1 /2) so their
+// keyspaces never collide.
 if (redisUrl) {
   modules.push(
     {
@@ -136,6 +138,12 @@ if (redisUrl) {
     },
     {
       resolve: "@medusajs/medusa/workflow-engine-redis",
+      // NB: the workflow engine REQUIRES `redis: { url }` even though
+      // it logs a deprecation warning suggesting `redisUrl`. Switching
+      // to `redisUrl` crashes the loader with:
+      //   "Cannot destructure property 'url' of '(intermediate value)'"
+      // The deprecation warning is wrong / ahead of the actual code.
+      // eslint-disable-next-line -- format kept for compatibility with module loader
       options: { redis: { url: redisWorkflowUrl } },
     },
   );

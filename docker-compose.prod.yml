@@ -32,12 +32,18 @@ services:
         condition: service_healthy
     networks:
       - veloura
+    # Caddy healthcheck hits its own /caddyhealth endpoint (defined in
+    # Caddyfile) which responds 200 directly WITHOUT proxying to medusa.
+    # Using /health would cascade failures: caddy would report unhealthy
+    # whenever medusa is unhealthy, which confuses monitoring.
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1/health"]
+      test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1/caddyhealth"]
       interval: 15s
       timeout: 5s
       retries: 3
       start_period: 10s
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
     deploy:
       resources:
         limits:
@@ -207,6 +213,8 @@ services:
       retries: 5
     networks:
       - veloura
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
     deploy:
       resources:
         limits:
@@ -255,6 +263,8 @@ services:
       retries: 5
     networks:
       - veloura
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
     deploy:
       resources:
         limits:

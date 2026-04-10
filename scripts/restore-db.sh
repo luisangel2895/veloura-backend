@@ -42,6 +42,15 @@ fi
 ENV_FILE_ARG=()
 [ -f .env.prod ] && ENV_FILE_ARG=(--env-file .env.prod)
 
+# Take a safety backup BEFORE restoring so an accidental restore is
+# recoverable. Skipped only if SKIP_PRE_RESTORE_BACKUP=1 is exported,
+# which exists for the case where this script is called as part of a
+# disaster-recovery flow that just imported a fresh dump.
+if [ "${SKIP_PRE_RESTORE_BACKUP:-0}" != "1" ] && [ "$MODE" = "docker" ]; then
+  echo ">>> Taking pre-restore safety backup"
+  ./scripts/backup-db.sh docker
+fi
+
 if [ "$MODE" = "docker" ]; then
   echo ">>> Stopping medusa + worker to release table locks"
   docker compose -f docker-compose.prod.yml "${ENV_FILE_ARG[@]}" stop medusa medusa-worker

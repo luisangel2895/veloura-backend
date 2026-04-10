@@ -1,15 +1,26 @@
 import { describe, it, expect, vi } from "vitest";
+import type * as MedusaUtils from "@medusajs/framework/utils";
 
-vi.mock("@medusajs/framework/utils", () => ({
-  ContainerRegistrationKeys: {
-    LOGGER: "logger",
-  },
-  Modules: {
-    ORDER: "order",
-  },
-}));
+// Import the REAL constants from @medusajs/framework/utils so the mock
+// keys match production. The previous version hardcoded `Modules.ORDER`
+// as the literal string "order" which could drift from upstream.
+import {
+  ContainerRegistrationKeys as RealContainerRegistrationKeys,
+  Modules as RealModules,
+} from "@medusajs/framework/utils";
+
+vi.mock("@medusajs/framework/utils", async () => {
+  const actual = await vi.importActual<typeof MedusaUtils>("@medusajs/framework/utils");
+  return {
+    ContainerRegistrationKeys: actual.ContainerRegistrationKeys,
+    Modules: actual.Modules,
+  };
+});
 
 import orderPlacedHandler, { config } from "../../subscribers/order-placed.js";
+
+const ORDER_KEY = RealModules.ORDER;
+const LOGGER_KEY = RealContainerRegistrationKeys.LOGGER;
 
 interface MockLogger {
   info: ReturnType<typeof vi.fn>;
@@ -40,8 +51,8 @@ function buildContainer(opts: {
 }): MockContainer {
   return {
     resolve: (key: string) => {
-      if (key === "logger") return opts.logger;
-      if (key === "order") return opts.orderModule ?? undefined;
+      if (key === LOGGER_KEY) return opts.logger;
+      if (key === ORDER_KEY) return opts.orderModule ?? undefined;
       return undefined;
     },
   };

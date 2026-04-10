@@ -1,9 +1,5 @@
 import { defineMiddlewares } from "@medusajs/medusa";
-import type {
-  MedusaNextFunction,
-  MedusaRequest,
-  MedusaResponse,
-} from "@medusajs/framework/http";
+import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { randomUUID } from "crypto";
 
 // Module augmentation: declare the optional `requestId` field on the
@@ -45,9 +41,7 @@ function corsDebugMiddleware(
 ): void {
   const origin = req.headers.origin;
   if (origin) {
-    req.scope
-      .resolve("logger")
-      ?.debug(`[CORS] ${req.method} ${req.path} from origin: ${origin}`);
+    req.scope.resolve("logger")?.debug(`[CORS] ${req.method} ${req.path} from origin: ${origin}`);
   }
   next();
 }

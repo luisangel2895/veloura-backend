@@ -71,8 +71,7 @@ describe("middleware configuration", () => {
   describe("store request-id middleware", () => {
     it("sets x-request-id from header when provided", async () => {
       const cfg = await loadConfig("development");
-      const storeMiddleware = cfg.routes.find((r) => r.matcher === "/store/*")!
-        .middlewares[0];
+      const storeMiddleware = cfg.routes.find((r) => r.matcher === "/store/*")!.middlewares[0];
 
       const req: MockReq = { headers: { "x-request-id": "existing-id-456" } };
       const setHeaderCalls: [string, string][] = [];
@@ -92,8 +91,7 @@ describe("middleware configuration", () => {
 
     it("generates a UUID when x-request-id header is not present", async () => {
       const cfg = await loadConfig("development");
-      const storeMiddleware = cfg.routes.find((r) => r.matcher === "/store/*")!
-        .middlewares[0];
+      const storeMiddleware = cfg.routes.find((r) => r.matcher === "/store/*")!.middlewares[0];
 
       const req: MockReq = { headers: {} };
       const setHeaderCalls: [string, string][] = [];
@@ -115,8 +113,7 @@ describe("middleware configuration", () => {
   describe("dev-only CORS debug middleware", () => {
     it("calls next() and logs origin when present", async () => {
       const cfg = await loadConfig("development");
-      const corsMiddleware = cfg.routes.find((r) => r.matcher === "/*")!
-        .middlewares[0];
+      const corsMiddleware = cfg.routes.find((r) => r.matcher === "/*")!.middlewares[0];
 
       const debugFn = vi.fn();
       const req: MockReq = {
@@ -138,8 +135,7 @@ describe("middleware configuration", () => {
 
     it("calls next() but does not log when no origin header", async () => {
       const cfg = await loadConfig("development");
-      const corsMiddleware = cfg.routes.find((r) => r.matcher === "/*")!
-        .middlewares[0];
+      const corsMiddleware = cfg.routes.find((r) => r.matcher === "/*")!.middlewares[0];
 
       const debugFn = vi.fn();
       const req: MockReq = {

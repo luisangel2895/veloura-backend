@@ -132,9 +132,7 @@ describe("medusa-config.ts (real module)", () => {
       const cfg = await loadConfig();
       expect(cfg.projectConfig.http.storeCors).toBe("http://localhost:3000");
       expect(cfg.projectConfig.http.adminCors).toBe("http://localhost:9000");
-      expect(cfg.projectConfig.http.authCors).toBe(
-        "http://localhost:3000,http://localhost:9000",
-      );
+      expect(cfg.projectConfig.http.authCors).toBe("http://localhost:3000,http://localhost:9000");
     });
 
     it("respects custom CORS env vars", async () => {
@@ -151,18 +149,14 @@ describe("medusa-config.ts (real module)", () => {
   describe("Redis modules with separate logical DBs", () => {
     it("does not load Redis modules when REDIS_URL is not set", async () => {
       const cfg = await loadConfig();
-      const redisModules = cfg.modules.filter((m) =>
-        String(m.resolve).includes("redis"),
-      );
+      const redisModules = cfg.modules.filter((m) => String(m.resolve).includes("redis"));
       expect(redisModules).toHaveLength(0);
     });
 
     it("loads three Redis modules with /0, /1, /2 namespaces", async () => {
       process.env.REDIS_URL = "redis://redis:6379";
       const cfg = await loadConfig();
-      const redisModules = cfg.modules.filter((m) =>
-        String(m.resolve).includes("redis"),
-      );
+      const redisModules = cfg.modules.filter((m) => String(m.resolve).includes("redis"));
       expect(redisModules).toHaveLength(3);
 
       // Verify each module uses a different Redis DB number.
@@ -223,8 +217,7 @@ describe("medusa-config.ts (real module)", () => {
       const cfg = await loadConfig();
       const fileMod = cfg.modules.find((m) => String(m.resolve).endsWith("/file"));
       expect(fileMod).toBeDefined();
-      const providers = (fileMod!.options as { providers: Array<{ resolve: string }> })
-        .providers;
+      const providers = (fileMod!.options as { providers: Array<{ resolve: string }> }).providers;
       expect(providers[0].resolve).toContain("file-local");
     });
 
@@ -236,8 +229,7 @@ describe("medusa-config.ts (real module)", () => {
       const cfg = await loadConfig();
       const fileMod = cfg.modules.find((m) => String(m.resolve).endsWith("/file"));
       expect(fileMod).toBeDefined();
-      const providers = (fileMod!.options as { providers: Array<{ resolve: string }> })
-        .providers;
+      const providers = (fileMod!.options as { providers: Array<{ resolve: string }> }).providers;
       expect(providers[0].resolve).toContain("file-s3");
     });
   });
