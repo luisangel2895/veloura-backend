@@ -59,8 +59,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Run tests with coverage
-        run: npm run test:coverage
+      - name: Print versions for debugging
+        run: |
+          echo "node:    $(node --version)"
+          echo "npm:     $(npm --version)"
+          echo "vitest:  $(npx vitest --version)"
+          echo "OS:      $(uname -a)"
+      - name: Run tests with coverage (verbose)
+        run: npx vitest run --coverage --reporter=verbose
       - name: Upload coverage artifact
         # Only run when coverage/ exists. v4 of upload-artifact is
         # deprecated and was failing in our CI runner — bumped to v7
