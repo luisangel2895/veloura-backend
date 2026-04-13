@@ -15,7 +15,7 @@
 # runners can use a multi-stage build because GitHub runners are not
 # affected by the libuv hang.
 
-FROM node:20-alpine
+FROM node:25-alpine
 
 # Runtime-only deps:
 #   wget     → for the HEALTHCHECK (smaller than curl)
